@@ -557,16 +557,29 @@ setInterval(async ()=>{
   }
 }, 15000);
 
-// ============ Toast ============
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
-  clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2000);
+// ============ Stale Link Detection ============
+async function checkStaleLink(){
+  const currentOrigin = window.location.origin;
+  const serverData = await cloudLoad();
+  if(!serverData || !serverData.meta || !serverData.meta.currentUrl) return;
+  const latestUrl = serverData.meta.currentUrl;
+  if(latestUrl && currentOrigin !== new URL(latestUrl).origin){
+    // Show stale link banner
+    const newDetailUrl = latestUrl + '/meeting_detail.html#' + meetingUID;
+    const banner = document.createElement('div');
+    banner.style.cssText = 'background:#fff3cd;border-bottom:2px solid #ffc107;padding:12px 20px;text-align:center;font-size:13px;color:#856404;position:sticky;top:0;z-index:100';
+    banner.innerHTML = '⚠️ 此链接已过期（部署域名已更新）<br><a href="'+newDetailUrl+'" style="color:#0d6efd;font-weight:bold;text-decoration:underline">点击前往最新链接</a> &nbsp; <span style="font-size:11px;color:#999">数据自动同步，无需担心</span>';
+    const pwOverlay = document.getElementById('pwOverlay');
+    if(pwOverlay) pwOverlay.parentNode.insertBefore(banner, pwOverlay);
+    else document.body.insertBefore(banner, document.body.firstChild);
+  }
 }
 
 // ============ Init ============
 (async function init(){
   await loadMeetingFromHash();
+  // Check if this is a stale link (deployed on old domain)
+  checkStaleLink();
   // Periodic sync check (server polling handles 15s, this is a 10s backup)
   setInterval(()=>{if(passwordVerified&&meeting){loadStateAndRender()}},10000);
   // Save before page closes

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会议执行进度看板 · 跳转中</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+.card{text-align:center;background:#fff;padding:40px;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.08);max-width:420px}
+.spinner{display:inline-block;width:36px;height:36px;border:3px solid #e0e0e0;border-top-color:#185fa5;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+h2{font-size:18px;color:#2c2c2a;margin:0 0 8px}
+p{font-size:13px;color:#888;margin:0 0 16px}
+.btn{display:inline-block;padding:10px 24px;background:#185fa5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px}
+.btn:hover{background:#0c447c}
+.error{color:#a32d2d;font-size:13px;margin-top:12px;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="spinner" id="spinner"></div>
+<h2>会议执行进度看板</h2>
+<p id="status">正在获取最新地址...</p>
+<a id="link" class="btn" style="display:none" href="#">前往看板</a>
+<p id="error" class="error"></p>
+</div>
+<script>
+const BLOB_ID = '019fe921-14fa-716a-92c8-327fb39b2d0d';
+const API = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+
+(async function(){
+  try{
+    const res = await fetch(API, {headers:{'Accept':'application/json'}});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const url = (data && data.meta && data.meta.currentUrl) || '';
+    if(url){
+      window.location.replace(url);
+      return;
+    }
+    throw new Error('no url in meta');
+  }catch(e){
+    document.getElementById('spinner').style.display='none';
+    document.getElementById('status').textContent='无法获取最新地址，请手动打开:';
+    document.getElementById('error').style.display='block';
+    document.getElementById('error').textContent='链接: https://04d26e58cb8a424ba416a7a740dae16d.gz5.agentos-app.net';
+    document.getElementById('link').style.display='inline-block';
+    document.getElementById('link').href='https://04d26e58cb8a424ba416a7a740dae16d.gz5.agentos-app.net';
+    document.getElementById('link').textContent='点击手动前往';
+  }
+})();
+</script>
+</body>
+</html>

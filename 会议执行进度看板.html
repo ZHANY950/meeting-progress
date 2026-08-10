@@ -549,6 +549,8 @@ function debouncedCloudSave(){
 function normalizeState(s){
   if(!s.meetings)s.meetings=[];
   if(!s.plannedMeetings)s.plannedMeetings=[];
+  if(!s.meta)s.meta={};
+  if(!s.meta.currentUrl)s.meta.currentUrl='';
   s.meetings.forEach(m=>{
     if(!m.progress)m.progress={};
     if(!m.status)m.status='筹备中';
@@ -579,6 +581,18 @@ async function loadState(){
     _cloudHash = JSON.stringify(state);
   }
 }
+
+// Write current deployment URL to cloud meta, for stale link detection
+async function updateCurrentUrl(){
+  const currentUrl = window.location.origin;
+  if(!state.meta || state.meta.currentUrl === currentUrl) return;
+  state.meta.currentUrl = currentUrl;
+  // Save to local first, then push to cloud
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  await cloudSave(state);
+  _cloudHash = JSON.stringify(state);
+}
+
 function saveState(silent){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   _cloudHash = JSON.stringify(state);
@@ -1677,6 +1691,9 @@ async function init(){
   renderPlannedMeetings();
   updatePlannedBadge();
   updateSyncIndicator('synced');
+
+  // Update current deployment URL in cloud meta (for stale link detection)
+  updateCurrentUrl();
 
   // Local backup every 1 minute
   setInterval(autoBackup,BACKUP_INTERVAL);
