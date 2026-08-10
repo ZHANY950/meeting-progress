@@ -5,28 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>会议执行进度看板 · 跳转中</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-.card{text-align:center;background:#fff;padding:40px;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.08);max-width:420px}
-.spinner{display:inline-block;width:36px;height:36px;border:3px solid #e0e0e0;border-top-color:#185fa5;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
-@keyframes spin{to{transform:rotate(360deg)}}
-h2{font-size:18px;color:#2c2c2a;margin:0 0 8px}
-p{font-size:13px;color:#888;margin:0 0 16px}
-.btn{display:inline-block;padding:10px 24px;background:#185fa5;color:#fff;border-radius:8px;text-decoration:none;font-size:14px}
-.btn:hover{background:#0c447c}
-.error{color:#a32d2d;font-size:13px;margin-top:12px;display:none}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+h2{font-size:20px;margin:0 0 8px}
+p{font-size:14px;color:#94a3b8;margin:0}
+a{color:#60a5fa}
 </style>
 </head>
 <body>
-<div class="card">
-<div class="spinner" id="spinner"></div>
-<h2>会议执行进度看板</h2>
-<p id="status">正在获取最新地址...</p>
-<a id="link" class="btn" style="display:none" href="#">前往看板</a>
-<p id="error" class="error"></p>
+<div>
+<h2>正在跳转...</h2>
+<p>如未自动跳转请点<a id="fallback" href="#">这里</a></p>
 </div>
 <script>
-const BLOB_ID = '019fe921-14fa-716a-92c8-327fb39b2d0d';
-const API = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+// 永久跳转入口 — 存放于 GitHub Pages (https://zhany950.github.io/meeting-progress/go.html)
+// 每次 CloudStudio 重新部署后，主看板自动将新域名写入 jsonblob meta.currentUrl
+// 此页面读取 jsonblob → 跳转到最新部署链接
+const FALLBACK = 'https://c57ecd7c163e4f949883fe467a8840da.sh3.agentos-app.net';
+const API = 'https://jsonblob.com/api/jsonBlob/019fe921-14fa-716a-92c8-327fb39b2d0d';
+
+document.getElementById('fallback').href = FALLBACK;
 
 (async function(){
   try{
@@ -34,15 +31,13 @@ const API = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     const url = (data && data.meta && data.meta.currentUrl) || '';
-    // Skip local file:// URLs (from local testing)
     if(url && !url.startsWith('file://') && url.startsWith('http')){
       window.location.replace(url);
       return;
     }
-    // fallback to hardcoded URL
-    window.location.replace('https://ecb2530a59804ed8bce017e6f4bae004.bj6.agentos-app.net');
-    return;
   } catch(e) {}
+  // 云端不可达 → 使用硬编码回退
+  window.location.replace(FALLBACK);
 })();
 </script>
 </body>
