@@ -34,20 +34,15 @@ const API = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     const url = (data && data.meta && data.meta.currentUrl) || '';
-    if(url){
+    // Skip local file:// URLs (from local testing)
+    if(url && !url.startsWith('file://') && url.startsWith('http')){
       window.location.replace(url);
       return;
     }
-    throw new Error('no url in meta');
-  }catch(e){
-    document.getElementById('spinner').style.display='none';
-    document.getElementById('status').textContent='无法获取最新地址，请手动打开:';
-    document.getElementById('error').style.display='block';
-    document.getElementById('error').textContent='备用链接: 请在浏览器输入上面地址';
-    document.getElementById('link').style.display='inline-block';
-    document.getElementById('link').href='https://ecb2530a59804ed8bce017e6f4bae004.bj6.agentos-app.net';
-    document.getElementById('link').textContent='点击手动前往';
-  }
+    // fallback to hardcoded URL
+    window.location.replace('https://ecb2530a59804ed8bce017e6f4bae004.bj6.agentos-app.net');
+    return;
+  } catch(e) {}
 })();
 </script>
 </body>
