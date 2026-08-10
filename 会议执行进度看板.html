@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会议执行进度看板 · 总览</title>
+<style>
+:root{--bg:#f5f5f5;--card:#fff;--text:#2c2c2a;--text2:#5f5e5a;--text3:#888780;--border:#d3d1c7;--green:#1d9e75;--green-bg:#e1f5ee;--blue:#185fa5;--blue-bg:#e6f1fb;--amber:#ba7517;--amber-bg:#faeeda;--red:#a32d2d;--red-bg:#fcebeb;--yellow:#f0c929;--yellow-bg:#fff9e6;--purple:#534ab7;--purple-bg:#eeedfe;--orange:#d85a30;--orange-bg:#faece7;--teal:#0e8c80;--teal-bg:#e0f5f3;--radius:10px;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
+
+/* Password overlay */
+.pw-overlay{position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.pw-overlay.hidden{display:none}
+.pw-box{text-align:center}
+.pw-box .icon{font-size:48px;margin-bottom:16px}
+.pw-box h2{margin-bottom:8px}
+.pw-box p{color:var(--text3);margin-bottom:20px;font-size:13px}
+.pw-box input{padding:10px 16px;border:2px solid var(--border);border-radius:8px;font-size:16px;text-align:center;width:200px;font-family:var(--font);letter-spacing:2px}
+.pw-box input:focus{outline:none;border-color:var(--blue)}
+.pw-box .pw-error{color:var(--red);font-size:12px;margin-top:8px;min-height:20px}
+.pw-box .pw-btn{margin-top:12px;padding:10px 32px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:14px;cursor:pointer;font-family:var(--font)}
+.pw-box .pw-btn:hover{background:#0c447c}
+
+/* Layout */
+.layout{display:flex;height:100vh}
+.sidebar{width:320px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .25s ease,opacity .25s ease;position:relative}
+.sidebar.collapsed{width:0!important;min-width:0!important;overflow:hidden;border-right:none;opacity:0;pointer-events:none}
+.sidebar-header{padding:16px;border-bottom:1px solid var(--border);position:relative}
+.sidebar-toggle{position:absolute;top:10px;right:8px;width:28px;height:28px;border:none;background:none;cursor:pointer;font-size:16px;color:var(--text3);border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .15s;z-index:5;line-height:1}
+.sidebar-toggle:hover{background:var(--bg);color:var(--text)}
+.sidebar-expand-btn{position:fixed;left:8px;top:16px;width:32px;height:32px;border:1px solid var(--border);border-radius:8px;background:var(--card);cursor:pointer;font-size:16px;color:var(--text2);z-index:50;display:none;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.1);line-height:1;transition:all .15s}
+.sidebar-expand-btn:hover{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.sidebar-expand-btn.show{display:flex}
+.sidebar-header h2{margin-bottom:4px}
+.sidebar-header p{font-size:12px;color:var(--text3)}
+.meeting-filter{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.meeting-filter .fbtn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.meeting-filter .fbtn:hover{border-color:var(--blue);color:var(--blue)}
+.meeting-filter .fbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.meeting-list{flex:1;overflow-y:auto;padding:8px}
+.meeting-card{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:all .15s;position:relative}
+.meeting-card:hover{border-color:var(--blue);background:var(--blue-bg)}
+.meeting-card.active{border-color:var(--blue);border-width:2px;background:var(--blue-bg)}
+.meeting-card .name{font-weight:500;font-size:14px}
+.meeting-card .meta-row{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:12px;display:inline-block;white-space:nowrap}
+.tag-offline{background:var(--purple-bg);color:var(--purple)}
+.tag-online{background:var(--blue-bg);color:var(--blue)}
+.tag-external{background:var(--teal-bg);color:var(--teal)}
+.tag-planning{background:var(--amber-bg);color:var(--amber)}
+.tag-ongoing{background:var(--blue-bg);color:var(--blue)}
+.tag-done{background:var(--green-bg);color:var(--green)}
+.tag-pending{background:var(--teal-bg);color:var(--teal)}
+.progress-mini{height:5px;background:#eee;border-radius:3px;margin-top:6px;overflow:hidden}
+.progress-mini-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+.badge-warn{position:absolute;top:6px;right:6px;background:var(--yellow);color:var(--text);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.badge-link{position:absolute;top:6px;right:6px;background:var(--teal-bg);color:var(--teal);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+
+.mcard-actions{display:flex;gap:6px;margin-top:6px}
+.mcard-actions .mini-btn{font-size:10px;padding:2px 8px;border-radius:10px;border:1px solid var(--border);background:var(--card);cursor:pointer;color:var(--text2);transition:all .15s}
+.mcard-actions .mini-btn:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.mcard-actions .mini-btn.copy-ok{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+.btn{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#0c447c;color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-danger{color:var(--red);border-color:var(--red)}
+.btn-danger:hover{background:var(--red-bg)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.btn-share{color:var(--purple);border-color:var(--purple);font-weight:500}
+.btn-share:hover{background:var(--purple-bg)}
+.btn-teal{color:var(--teal);border-color:var(--teal);font-weight:500}
+.btn-teal:hover{background:var(--teal-bg)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--card);padding:0 20px;flex-shrink:0;flex-wrap:wrap}
+.tab{padding:12px 20px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab .tab-badge{font-size:10px;background:var(--teal);color:#fff;padding:1px 6px;border-radius:10px;margin-left:4px}
+.tab-content{flex:1;overflow-y:auto;padding:20px;display:none}
+.tab-content.active{display:block}
+
+/* Progress */
+.progress-bar-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.progress-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.progress-bar-label{font-weight:500}
+.progress-bar-pct{font-size:20px;font-weight:500}
+.progress-bar-track{height:12px;background:#eee;border-radius:6px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:6px;transition:width .3s}
+.pct-high{background:var(--green)}.pct-mid{background:var(--amber)}.pct-low{background:var(--red)}
+
+.phase-section{margin-bottom:16px}
+.phase-title{font-size:13px;font-weight:500;margin-bottom:8px;padding:5px 10px;border-radius:6px;display:inline-block}
+.phase-pre{background:var(--purple-bg);color:var(--purple)}
+.phase-during{background:var(--orange-bg);color:var(--orange)}
+.phase-post{background:var(--amber-bg);color:var(--amber)}
+
+.node-grid{display:grid;gap:5px}
+.node-row{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;position:relative}
+.node-row:hover{border-color:var(--blue)}
+.node-row.done{border-color:var(--green);background:var(--green-bg)}
+.node-row.progress{border-color:var(--amber);background:var(--amber-bg)}
+.node-row.overdue{border-color:var(--yellow);border-width:2px;background:var(--yellow-bg)}
+.node-row.overdue::after{content:'⚠ 逾期';position:absolute;top:-8px;right:8px;background:var(--yellow);color:var(--text);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.node-row .node-time{font-size:11px;color:var(--text3);min-width:75px;text-align:right;white-space:nowrap}
+.node-row .node-stage{font-weight:500;min-width:110px;font-size:12px}
+.node-row .node-task{flex:1;color:var(--text2);font-size:12px}
+.node-row .node-owner{font-size:11px;color:var(--text3);min-width:90px;text-align:right}
+.node-row .node-deadline{font-size:10px;color:var(--text3);min-width:70px;text-align:right}
+.node-status{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;flex-shrink:0}
+.node-status.done{border-color:var(--green);background:var(--green);color:#fff}
+.node-status.progress{border-color:var(--amber);background:var(--amber);color:#fff}
+
+.alert-banner{background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px}
+
+/* Gantt */
+.gantt-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.gantt-legend{display:flex;gap:16px;font-size:11px;align-items:center;flex-wrap:wrap}
+.gantt-legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+.gantt-scroll{overflow-x:auto;overflow-y:visible}
+.gantt-table{min-width:900px;border-collapse:collapse;font-size:12px;width:100%}
+.gantt-table th{text-align:left;padding:8px 10px;background:#f5f5f5;border-bottom:2px solid var(--border);font-weight:500;color:var(--text2);white-space:nowrap}
+.gantt-table td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.gantt-table .gantt-name{font-weight:500;min-width:140px}
+.gantt-table .gantt-name small{font-weight:400;color:var(--text3);font-size:11px}
+.gantt-bar-wrap{position:relative;height:28px;background:#f0efe9;border-radius:4px;min-width:300px;overflow:visible}
+.gantt-bar-today{position:absolute;top:-4px;width:2px;height:36px;background:var(--red);z-index:3;border-radius:1px}
+.gantt-bar-today::after{content:'今天';position:absolute;top:-16px;left:-14px;font-size:10px;color:var(--red);font-weight:500;white-space:nowrap}
+.gantt-bar{position:absolute;top:2px;height:24px;border-radius:3px;display:flex;overflow:hidden}
+.gantt-bar .bar-pre{background:var(--purple);opacity:.85;height:100%}
+.gantt-bar .bar-during{background:var(--orange);opacity:.85;height:100%}
+.gantt-bar .bar-post{background:var(--amber);opacity:.85;height:100%}
+.gantt-bar-done{position:absolute;top:2px;height:24px;border-radius:3px 0 0 3px;background:var(--green);opacity:.9;z-index:1}
+.gantt-milestone{position:absolute;top:0;width:2px;height:28px;background:var(--text3);opacity:.3;z-index:2}
+.gantt-milestone.late{background:var(--yellow);opacity:.8;width:3px}
+.gantt-stats{display:flex;gap:6px;flex-wrap:wrap}
+.gantt-stat{font-size:11px;padding:3px 8px;border-radius:12px;white-space:nowrap}
+.gantt-stat.pre-done{background:var(--purple-bg);color:var(--purple)}
+.gantt-stat.during-done{background:var(--orange-bg);color:var(--orange)}
+.gantt-stat.post-done{background:var(--amber-bg);color:var(--amber)}
+.gantt-stat.overdue{background:var(--yellow-bg);color:var(--amber);font-weight:500}
+
+/* Summary */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.stat-card .label{font-size:12px;color:var(--text3)}
+.stat-card .value{font-size:24px;font-weight:500;margin-top:4px}
+.stat-card .sub{font-size:12px;color:var(--text2);margin-top:2px}
+.table-wrap{overflow-x:auto}
+.table-wrap table{width:100%;border-collapse:collapse;font-size:12px}
+.table-wrap th{text-align:left;padding:10px 12px;background:#f5f5f5;border-bottom:1px solid var(--border);font-weight:500;color:var(--text2);white-space:nowrap}
+.table-wrap td{padding:10px 12px;border-bottom:1px solid var(--border)}
+
+/* Planned Meetings */
+.planned-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.planned-table{width:100%;border-collapse:collapse;font-size:12px}
+.planned-table th{text-align:left;padding:10px 12px;background:#f5f5f5;border-bottom:2px solid var(--border);font-weight:500;color:var(--text2);white-space:nowrap}
+.planned-table td{padding:10px 12px;border-bottom:1px solid var(--border)}
+.planned-table .pm-name{font-weight:500}
+.planned-table .pm-sessions{font-size:13px;font-weight:500}
+.session-bar{display:inline-block;height:16px;line-height:16px;background:var(--teal-bg);color:var(--teal);border-radius:8px;padding:0 8px;font-size:11px;font-weight:500;min-width:40px;text-align:center}
+.session-bar.all-done{background:var(--green-bg);color:var(--green)}
+.session-bar.partial{background:var(--amber-bg);color:var(--amber)}
+.pm-form-tag{font-size:11px;padding:2px 8px;border-radius:12px;display:inline-block}
+.pm-form-offline{background:var(--purple-bg);color:var(--purple)}
+.pm-form-online{background:var(--blue-bg);color:var(--blue)}
+.pm-form-any{background:#eee;color:var(--text2)}
+.pm-source{font-size:11px;color:var(--text3)}
+.pm-linked-meetings{font-size:11px;color:var(--teal);margin-top:2px}
+.pm-actions{display:flex;gap:6px}
+.pm-linkage-notice{background:var(--teal-bg);border:1px solid var(--teal);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:12px;padding:24px;width:480px;max-height:80vh;overflow-y:auto}
+.modal h3{margin-bottom:16px}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:var(--font)}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--blue)}
+.form-group .hint{font-size:11px;color:var(--text3);margin-top:4px}
+.form-group .linkage-hint{font-size:12px;color:var(--teal);margin-top:4px;padding:6px 10px;background:var(--teal-bg);border-radius:6px;display:none}
+.form-group .linkage-hint.show{display:block}
+
+.export-section{margin-bottom:16px}
+.export-section textarea{width:100%;height:120px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:12px;resize:vertical}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 24px;border-radius:20px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Calendar */
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.cal-nav{display:flex;gap:8px;align-items:center}
+.cal-nav button{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:var(--card);cursor:pointer;font-size:14px;font-family:var(--font)}
+.cal-nav button:hover{border-color:var(--blue);color:var(--blue)}
+.cal-nav .cal-title{font-size:18px;font-weight:500;min-width:140px;text-align:center}
+.cal-filter{display:flex;gap:6px;align-items:center;font-size:12px}
+.cal-filter select{padding:4px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:var(--font)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-grid .cal-hd{background:#f0efe9;padding:8px;text-align:center;font-size:12px;font-weight:500;color:var(--text2)}
+.cal-cell{background:var(--card);min-height:90px;padding:4px;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.cal-cell.other-month{background:#fafaf8;opacity:.5}
+.cal-cell.today{background:var(--blue-bg)}
+.cal-cell .cal-day{font-size:12px;color:var(--text2);font-weight:500;text-align:right}
+.cal-cell.today .cal-day{color:var(--blue);font-weight:700}
+.cal-meeting{font-size:10px;padding:2px 5px;border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
+.cal-meeting:hover{opacity:.85;transform:translateX(2px)}
+.cal-meeting.offline{background:var(--purple-bg);color:var(--purple)}
+.cal-meeting.online{background:var(--blue-bg);color:var(--blue)}
+.cal-meeting.external{background:var(--teal-bg);color:var(--teal)}
+.cal-meeting.done{opacity:.5;text-decoration:line-through}
+.cal-legend{display:flex;gap:16px;font-size:11px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.cal-legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- Password Overlay -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <div class="icon">🔐</div>
+    <h2>会议执行进度总看板</h2>
+    <p>请输入管理密码以访问全部数据</p>
+    <input type="password" id="pwInput" placeholder="输入密码" maxlength="20" onkeydown="if(event.key==='Enter')checkMasterPassword()">
+    <div class="pw-error" id="pwError"></div>
+    <button class="pw-btn" onclick="checkMasterPassword()">验证进入</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起侧边栏">◀</button>
+      <h2>会议登记表</h2>
+      <p>点击会议查看SOP进度 · 「📋」复制单场链接</p>
+    </div>
+    <div class="meeting-filter" id="meetingFilter">
+      <button class="fbtn active" onclick="setFilter('')">全部</button>
+      <button class="fbtn" onclick="setFilter('筹备中')">筹备中</button>
+      <button class="fbtn" onclick="setFilter('进行中')">进行中</button>
+      <button class="fbtn" onclick="setFilter('已完成')">已完成</button>
+    </div>
+    <div class="meeting-list" id="meetingList"></div>
+    <div class="sidebar-footer">
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="openModal()">+ 新增会议</button>
+        <button class="btn btn-sm btn-teal" onclick="switchTab('planned');openPlannedModal()">+ 待开展</button>
+        <button class="btn btn-sm btn-share" onclick="switchTab('gantt')">甘特图</button>
+        <button class="btn btn-sm btn-teal" onclick="switchTab('calendar')">日历</button>
+        <button class="btn btn-sm" onclick="exportData();switchTab('export')">备份</button>
+      </div>
+      <div class="sync-indicator" id="syncIndicator" style="margin-top:8px;padding:6px 10px;border-radius:6px;background:var(--bg-dark);font-size:11px;display:flex;align-items:center;gap:6px">
+        <span class="sync-dot-sync" id="syncDotSync" style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
+        <span id="syncTextSync" style="color:var(--text-secondary);flex:1">云端已同步</span>
+        <span id="syncTimeSync" style="color:var(--text-muted);font-size:10px"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active" data-tab="progress" onclick="switchTab('progress')">SOP进度看板</div>
+      <div class="tab" data-tab="planned" onclick="switchTab('planned')">待开展会议<span class="tab-badge" id="plannedBadge" style="display:none">0</span></div>
+      <div class="tab" data-tab="gantt" onclick="switchTab('gantt')">甘特图</div>
+      <div class="tab" data-tab="calendar" onclick="switchTab('calendar')">日历</div>
+      <div class="tab" data-tab="summary" onclick="switchTab('summary')">汇总统计</div>
+      <div class="tab" data-tab="export" onclick="switchTab('export')">导入/导出</div>
+    </div>
+
+    <div class="tab-content active" id="tab-progress">
+      <div id="progressContent"><div class="empty-state"><div class="icon">📋</div><p>请从左侧选择一场会议，或点击「新增会议」开始</p></div></div>
+    </div>
+    <div class="tab-content" id="tab-planned"><div id="plannedContent"></div></div>
+    <div class="tab-content" id="tab-gantt"><div id="ganttContent"></div></div>
+    <div class="tab-content" id="tab-calendar"><div id="calendarContent"></div></div>
+    <div class="tab-content" id="tab-summary"><div id="summaryContent"></div></div>
+    <div class="tab-content" id="tab-export">
+      <div class="export-section">
+        <h3 style="margin-bottom:8px">导出数据备份 (JSON)</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">定期导出备份，防止浏览器数据丢失。粘贴下方可恢复。</p>
+        <textarea id="exportJson" readonly></textarea>
+        <div class="btn-group" style="margin-top:8px">
+          <button class="btn btn-sm" onclick="exportData()">刷新导出</button>
+          <button class="btn btn-sm" onclick="downloadBackup()">下载备份文件</button>
+          <button class="btn btn-sm" onclick="copyExport()">复制到剪贴板</button>
+        </div>
+      </div>
+      <div class="export-section">
+        <h3 style="margin-bottom:8px">导入恢复数据 (JSON)</h3>
+        <textarea id="importJson" placeholder="在此粘贴JSON数据..."></textarea>
+        <div class="btn-group" style="margin-top:8px">
+          <button class="btn btn-sm btn-primary" onclick="importData()">导入数据</button>
+          <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">从文件导入</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importFromFile(event)">
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn btn-sm btn-danger" onclick="clearAll()">清空所有数据</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating expand button when sidebar collapsed -->
+<button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebar()" title="展开会议登记表">▶</button>
+
+<!-- Meeting Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modalTitle">新增会议</h3>
+    <div class="form-group"><label>会议名称 *</label><input type="text" id="meetingName" placeholder="例：苏州眩晕巡讲" oninput="checkPlannedLinkage()"></div>
+    <div class="form-group" id="linkageGroup"><div class="linkage-hint" id="linkageHint"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>开始日期 *</label><input type="date" id="meetingStartDate"></div>
+      <div class="form-group"><label>结束日期 *</label><input type="date" id="meetingEndDate"></div>
+    </div>
+    <div class="form-group"><label>类型 *</label><select id="meetingType" onchange="toggleExternalFields()"><option value="线下">线下会议</option><option value="线上">线上会议</option><option value="外部会议">外部会议</option></select></div>
+    <div class="form-group"><label>DM团队</label><select id="meetingDm"><option value="">请选择</option><option value="何方禹">苏南 - 何方禹</option><option value="孟鈃">南1 - 孟鈃</option><option value="郑家成">南2 - 郑家成</option><option value="李路">济南 - 李路</option><option value="张鑫">青岛 - 张鑫</option><option value="卜先峰">安徽 - 卜先峰</option></select></div>
+    <div class="form-group"><label>城市</label><input type="text" id="meetingCity" placeholder="例：苏州"></div>
+    <div class="form-group"><label>会议总监</label><input type="text" id="meetingDirector" placeholder="例：张云"></div>
+    <div class="form-group"><label>状态</label><select id="meetingStatus"><option value="筹备中">筹备中</option><option value="进行中">进行中</option><option value="已完成">已完成</option></select></div>
+    <div class="form-group"><label>备注</label><input type="text" id="meetingNotes" placeholder="可填额外说明"></div>
+    <div id="externalFields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
+      <h3 style="margin-bottom:10px;font-size:13px;color:var(--teal)">外部会议邀请管理</h3>
+      <div class="form-group">
+        <label>DM名额分配</label>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+          <thead><tr>
+            <th style="text-align:left;padding:4px 6px;border-bottom:2px solid var(--border)">DM</th>
+            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)">名额</th>
+            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)">已邀</th>
+          </tr></thead>
+          <tbody id="extDmQuotaBody"></tbody>
+          <tfoot><tr style="border-top:2px solid var(--border)">
+            <td style="padding:4px 6px;font-weight:600">合计</td>
+            <td id="extTotalQuota" style="text-align:center;font-weight:600;color:var(--teal)">0</td>
+            <td id="extTotalInvited" style="text-align:center;font-weight:600;color:var(--teal)">0</td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <div class="form-group"><label>邀请截止日期</label><input type="date" id="extInviteDl"></div>
+      <div class="form-group"><label>专家替换截止日期</label><input type="date" id="extReplaceDl"></div>
+      <div class="form-group"><label>专家行程收集截止日期</label><input type="date" id="extTravelDl"></div>
+    </div>
+    <input type="hidden" id="editId">
+    <div class="btn-group" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveMeeting()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Planned Meeting Modal -->
+<div class="modal-overlay" id="plannedModal">
+  <div class="modal">
+    <h3 id="plannedModalTitle">新增待开展会议</h3>
+    <div class="form-group"><label>会议/系列名称 *</label><input type="text" id="pmName" placeholder="例：治痛梦工坊（系列名，不含期数）"></div>
+    <div class="form-group"><label>计划场次 *</label><input type="number" id="pmSessions" value="1" min="1" max="50"><div class="hint">1=单场会议；>1=系列会议（如3场）</div></div>
+    <div class="form-group"><label>形式</label><select id="pmForm"><option value="不限">不限</option><option value="线下">线下</option><option value="线上">线上</option></select></div>
+    <div class="form-group"><label>计划来源</label><select id="pmSource"><option value="年度会议计划">年度会议计划</option><option value="季度规划">季度规划</option><option value="月度计划">月度计划</option><option value="临时新增">临时新增</option><option value="区域规划">区域规划</option><option value="总部下达">总部下达</option></select></div>
+    <div class="form-group"><label>备注</label><input type="text" id="pmNote" placeholder="可填额外说明"></div>
+    <input type="hidden" id="pmEditId">
+    <div class="btn-group" style="margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closePlannedModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePlannedMeeting()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ Config ============
+const MASTER_PASSWORD = '0818';
+
+const AUTO_BACKUP_KEY = 'meeting_auto_backup_v3';
+const BACKUP_INTERVAL = 60000; // 1 minute local backup
+
+// ============ SOP ============
+const OFFLINE_SOP = [
+  {id:'pre_1',time:'T-60~T-30天',stage:'会议设计',task:'明确会议目标（主要观念、策略、主题、预算）',owner:'LMM&DM',phase:'pre',deadlineDays:-30},
+  {id:'pre_2',time:'T-60~T-30天',stage:'会议立项',task:'拉群做内外部沟通（人选、讲题、时间、内容）一周内主席定时间、方向；两周内所有嘉宾确定好',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_3',time:'T-60~T-30天',stage:'设定会议总监',task:'统筹会议全流程筹备与执行，把控时间节点、分工落实及问题协调',owner:'会议总监',phase:'pre',deadlineDays:-30},
+  {id:'pre_4',time:'T-14天',stage:'会议出版定型',task:'确认初版日程、串场等细节',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_5',time:'T-14天',stage:'讨论话题共识',task:'与讨论嘉宾提前共识讨论话题，明确讨论方向，确保讨论环节聚焦会议核心，避免偏离主题',owner:'LMM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_6',time:'T-14天',stage:'讲者PPT审核',task:'与讲者过PPT内容，强调需传递的核心信息',owner:'DM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_7',time:'T-14天',stage:'主席沟通流程',task:'确认会议日程细节、串场流程、讨论内容',owner:'LMM&DM',phase:'pre',deadlineDays:-14},
+  {id:'pre_8',time:'T-14天',stage:'分工表确认',task:'设定会议分工表，明确任务与责任',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_9',time:'T-7天',stage:'晚宴沟通（会前/会后）',task:'确认晚宴核心信息：明确晚宴名单（参会嘉宾、核心客户）、晚宴时间、地点、行程安排',owner:'LMM&DM',phase:'pre',deadlineDays:-7},
+  {id:'pre_11',time:'T-2天',stage:'会前沟通会（线上）',task:'确认内部分工落地情况，明确各岗位对接人，明确供应商服务范围及对接细节（如物料制作、现场布置、技术支持等）协调解决前期筹备中的问题，达成全流程共识',owner:'LMM',phase:'pre',deadlineDays:-2},
+  {id:'pre_12',time:'T-7~T-1天',stage:'参会嘉宾沟通',task:'会前一周每天统计参会嘉宾以及任务嘉宾出席情况（会前7-3-1天提醒客户参会）',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_13',time:'T-1天',stage:'会前最终确认',task:'嘉宾出行交通、用餐名单、会议最终出席人员',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_14',time:'T-1天',stage:'会前彩排',task:'设备调试、物料摆放、会议流程彩排等',owner:'会议总监&LMM&供应商',phase:'pre',deadlineDays:-1},
+  {id:'during_1',time:'D-DAY',stage:'坚守岗位，各司其职',task:'做好会议记录与总结（三点核心传递信息）；讨论嘉宾发言做记录；MICS坚守任务；确保客户全程参会',owner:'ALL',phase:'during',deadlineDays:0},
+  {id:'post_1',time:'T+3天',stage:'会后复盘（线上）',task:'全员线上复盘，设定会后TTH目标及行动计划，传递三点核心信息',owner:'DM',phase:'post',deadlineDays:3},
+  {id:'post_2',time:'T+7天',stage:'持续跟进',task:'跟进会后四周TTH进展',owner:'LMM',phase:'post',deadlineDays:7}
+];
+
+const ONLINE_SOP = [
+  {id:'pre_1',time:'T-60~T-30天',stage:'会议设计',task:'明确会议目标（主要观念、策略、主题、预算）',owner:'LMM&DM',phase:'pre',deadlineDays:-30},
+  {id:'pre_2',time:'T-60~T-30天',stage:'会议立项',task:'拉群做内外部沟通（人选、讲题、时间、内容）一周内主席定时间、方向；两周内所有嘉宾确定好',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_3',time:'T-60~T-30天',stage:'设定会议总监',task:'统筹会议全流程筹备与执行，把控时间节点、分工落实及问题协调',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_4',time:'T-14天',stage:'会议出版定型',task:'确认初版日程、串场等细节',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_5',time:'T-14天',stage:'讨论话题共识',task:'与讨论嘉宾提前共识讨论话题，明确讨论方向，确保讨论环节聚焦会议核心，避免偏离主题',owner:'LMM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_6',time:'T-14天',stage:'讲者PPT审核',task:'与讲者过PPT内容，强调需传递的核心信息',owner:'DM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_7',time:'T-14天',stage:'主席沟通流程',task:'确认会议日程细节、串场流程、讨论内容',owner:'LMM&DM',phase:'pre',deadlineDays:-14},
+  {id:'pre_10',time:'T-2天',stage:'会前沟通会（线上）',task:'确认内部分工落地情况，明确各岗位对接人，明确供应商服务范围及对接细节（如物料制作、现场布置、技术支持等）协调解决前期筹备中的问题，达成全流程共识',owner:'LMM',phase:'pre',deadlineDays:-2},
+  {id:'pre_11',time:'T-7~T-1天',stage:'参会嘉宾沟通',task:'会前一周每天统计参会嘉宾以及任务嘉宾出席情况（会前7-3-1天提醒客户参会）',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_12',time:'T-1天',stage:'会前最终确认',task:'嘉宾出行交通、用餐名单、会议最终出席人员',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'during_1',time:'D-DAY',stage:'会前彩排',task:'任务嘉宾会前上线测试网络、视频、声音、ppt播放',owner:'会议总监',phase:'during',deadlineDays:0},
+  {id:'during_2',time:'D-DAY',stage:'坚守岗位，各司其职',task:'做好会议记录与总结（三点核心传递信息）；讨论嘉宾发言做记录；MICS坚守任务；确保客户全程参会',owner:'ALL',phase:'during',deadlineDays:0},
+  {id:'post_1',time:'T+3天',stage:'会后复盘',task:'全员复盘，设定会后TTH目标及行动计划，传递三点核心信息',owner:'DM',phase:'post',deadlineDays:3},
+  {id:'post_2',time:'T+7天',stage:'持续跟进',task:'跟进会后四周TTH进展',owner:'LMM',phase:'post',deadlineDays:7}
+];
+
+const EXTERNAL_SOP = [
+  {id:'ext_invite',time:'自定义',stage:'专家邀请',task:'按分配名额完成专家邀请，确认参会名单',owner:'DM',phase:'pre',customDeadline:true},
+  {id:'ext_replace',time:'自定义',stage:'专家替换',task:'完成专家替换确认，锁定最终参会专家',owner:'DM',phase:'pre',customDeadline:true},
+  {id:'ext_travel',time:'自定义',stage:'行程收集',task:'收集确认专家行程信息（交通/住宿）',owner:'DM',phase:'pre',customDeadline:true}
+];
+
+// DM list for external meeting quota allocation
+const DM_QUOTA_LIST = [
+  {name:'何方禹',team:'苏南'},
+  {name:'孟鈃',team:'南1'},
+  {name:'郑家成',team:'南2'},
+  {name:'李路',team:'济南'},
+  {name:'张鑫',team:'青岛'},
+  {name:'卜先峰',team:'安徽'},
+  {name:'待分配',team:'-'}
+];
+
+function ensureDmQuota(ext){
+  if(!ext.dmQuota){
+    ext.dmQuota={};ext.dmInvited={};
+    DM_QUOTA_LIST.forEach(d=>{ext.dmQuota[d.name]=0;ext.dmInvited[d.name]=0});
+    // Migrate old single quota to 待分配
+    if(ext.quota){ext.dmQuota['待分配']=ext.quota}
+    if(ext.invited){ext.dmInvited['待分配']=ext.invited}
+  }
+}
+function getExtTotalQuota(m){if(!m.extData||!m.extData.dmQuota)return m.extData?(m.extData.quota||0):0;return DM_QUOTA_LIST.reduce((s,d)=>s+(m.extData.dmQuota[d.name]||0),0)}
+function getExtTotalInvited(m){if(!m.extData||!m.extData.dmInvited)return m.extData?(m.extData.invited||0):0;return DM_QUOTA_LIST.reduce((s,d)=>s+(m.extData.dmInvited[d.name]||0),0)}
+
+// ============ State ============
+const STORAGE_KEY = 'meeting_progress_data_v3';
+let state = {meetings:[], plannedMeetings:[]};
+let passwordVerified = false;
+let meetingFilter = '';
+let calendarMonth = new Date();
+let calendarDMFilter = '';
+
+// ============ Cloud Sync (jsonblob.com) ============
+const CLOUD_BLOB_ID = '019fe921-14fa-716a-92c8-327fb39b2d0d';
+const CLOUD_API = 'https://jsonblob.com/api/jsonBlob/' + CLOUD_BLOB_ID;
+let _cloudHash = '';
+let _cloudSaveTimer = null;
+let _cloudSyncing = false;
+let _cloudETag = null;
+let _lastCloudSaveTime = null;
+let _cloudSaveRetries = 0;
+let _cloudSavePending = false;
+
+function updateSyncIndicator(status, timeStr){
+  const dot=document.getElementById('syncDotSync');
+  const text=document.getElementById('syncTextSync');
+  const time=document.getElementById('syncTimeSync');
+  if(!dot) return;
+  const colors={synced:'var(--green)',syncing:'var(--amber)',error:'var(--red)',offline:'var(--text-muted)'};
+  const labels={synced:'云端已同步',syncing:'同步中...',error:'同步失败(本地已存)',offline:'离线模式'};
+  dot.style.background=colors[status]||colors.synced;
+  text.textContent=labels[status]||labels.synced;
+  time.textContent=timeStr||(_lastCloudSaveTime?_lastCloudSaveTime.toLocaleTimeString():'');
+}
+
+async function cloudLoad(){
+  try{
+    const headers = {'Accept':'application/json'};
+    if(_cloudETag) headers['If-None-Match'] = _cloudETag;
+    const res = await fetch(CLOUD_API, {headers});
+    if(res.status === 304) return null;
+    if(!res.ok) return null;
+    const etag = res.headers.get('ETag');
+    if(etag) _cloudETag = etag;
+    return await res.json();
+  }catch(e){ return null; }
+}
+
+async function cloudSave(data){
+  if(_cloudSavePending) return;
+  _cloudSavePending = true;
+  updateSyncIndicator('syncing');
+  try{
+    const res = await fetch(CLOUD_API,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(data)
+    });
+    if(res.status === 429){
+      _cloudSaveRetries++;
+      console.warn('Cloud rate limited (retry #'+_cloudSaveRetries+'), will retry in 62s');
+      updateSyncIndicator('error','限流重试中');
+      clearTimeout(_cloudSaveTimer);
+      _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, 62000);
+      _cloudSavePending = false;
+      return;
+    }
+    if(!res.ok){
+      console.error('Cloud save HTTP error:', res.status);
+      updateSyncIndicator('error','HTTP '+res.status);
+      _cloudSavePending = false;
+      return;
+    }
+    const etag = res.headers.get('ETag');
+    if(etag) _cloudETag = etag;
+    _cloudHash = JSON.stringify(data);
+    _lastCloudSaveTime = new Date();
+    _cloudSaveRetries = 0;
+    updateSyncIndicator('synced');
+  }catch(e){
+    console.error('Cloud save failed:',e);
+    updateSyncIndicator('error','网络异常');
+    // Retry with exponential backoff (max 3 retries)
+    if(_cloudSaveRetries < 3){
+      _cloudSaveRetries++;
+      const delay = Math.pow(2, _cloudSaveRetries) * 5000; // 10s, 20s, 40s
+      clearTimeout(_cloudSaveTimer);
+      _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, delay);
+    }
+  }
+  _cloudSavePending = false;
+}
+
+function debouncedCloudSave(){
+  clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer = setTimeout(()=>{ cloudSave(state); }, 2000);
+}
+
+function normalizeState(s){
+  if(!s.meetings)s.meetings=[];
+  if(!s.plannedMeetings)s.plannedMeetings=[];
+  s.meetings.forEach(m=>{
+    if(!m.progress)m.progress={};
+    if(!m.status)m.status='筹备中';
+    if(!m.uid)m.uid=generateUID();
+    if(m.type==='外部会议'&&!m.extData)m.extData={quota:1,invited:0,inviteDeadline:'',replaceDeadline:'',travelDeadline:''};
+    if(m.type==='外部会议'&&m.extData)ensureDmQuota(m.extData);
+    if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}
+    if(!m.endDate)m.endDate=m.startDate;
+    if(!m.date)m.date=m.startDate;
+  });
+  return s;
+}
+
+async function loadState(){
+  // Try server first
+  const serverData = await cloudLoad();
+  if(serverData && serverData.meetings && serverData.meetings.length > 0){
+    state = normalizeState(serverData);
+    _cloudHash = JSON.stringify(state);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } else {
+    // Fall back to localStorage
+    try{const d=localStorage.getItem(STORAGE_KEY);if(d){state=normalizeState(JSON.parse(d));_cloudHash=JSON.stringify(state)}}catch(e){}
+  }
+  // If server has no data but localStorage does, push to server
+  if((!serverData || !serverData.meetings || serverData.meetings.length === 0) && state.meetings.length > 0){
+    cloudSave(state);
+    _cloudHash = JSON.stringify(state);
+  }
+}
+function saveState(silent){
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  _cloudHash = JSON.stringify(state);
+  // Real-time local backup on every save
+  autoBackup();
+  // Debounced cloud save
+  debouncedCloudSave();
+  updatePlannedBadge();
+}
+
+// ============ Auto Backup (triple redundancy) ============
+function autoBackup(){
+  try{
+    const ts=new Date().toISOString();
+    const backup={data:state,timestamp:ts,version:'3.0'};
+    const backupStr=JSON.stringify(backup);
+    // Primary backup
+    localStorage.setItem(AUTO_BACKUP_KEY,backupStr);
+    // Secondary backup (rotate: keep last 3 versions)
+    const bk2=localStorage.getItem(AUTO_BACKUP_KEY+'_1');
+    if(bk2)localStorage.setItem(AUTO_BACKUP_KEY+'_2',bk2);
+    if(backupStr)localStorage.setItem(AUTO_BACKUP_KEY+'_1',backupStr);
+    // Update sync indicator time
+    if(_lastCloudSaveTime){
+      const dot=document.getElementById('syncDotSync');
+      const time=document.getElementById('syncTimeSync');
+      if(time)time.textContent=_lastCloudSaveTime.toLocaleTimeString();
+    }
+  }catch(e){}
+}
+function restoreAutoBackup(){
+  // Try primary backup, then secondary, then tertiary
+  const keys=[AUTO_BACKUP_KEY, AUTO_BACKUP_KEY+'_1', AUTO_BACKUP_KEY+'_2'];
+  for(const key of keys){
+    try{
+      const raw=localStorage.getItem(key);
+      if(!raw)continue;
+      const backup=JSON.parse(raw);
+      if(!backup.data||!backup.data.meetings)continue;
+      state=backup.data;
+      if(!state.plannedMeetings)state.plannedMeetings=[];
+      state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.progress)m.progress={};if(!m.status)m.status='筹备中';if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
+      saveState(true);
+      return true;
+    }catch(e){}
+  }
+  return false;
+}
+
+// ============ Password ============
+function checkMasterPassword(){
+  const input=document.getElementById('pwInput').value.trim();
+  if(!input){document.getElementById('pwError').textContent='请输入密码';return}
+  if(input!==MASTER_PASSWORD){
+    document.getElementById('pwError').textContent='密码错误，请重试';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+    return;
+  }
+  passwordVerified=true;
+  document.getElementById('pwOverlay').classList.add('hidden');
+  document.getElementById('pwError').textContent='';
+  init();
+}
+
+// ============ Helpers ============
+function generateUID(){return 'm_'+Date.now()+'_'+Math.random().toString(36).substr(2,6)}
+function generatePMID(){return 'pm_'+Date.now()+'_'+Math.random().toString(36).substr(2,6)}
+function getSOP(type){if(type==='线上')return ONLINE_SOP;if(type==='外部会议')return EXTERNAL_SOP;return OFFLINE_SOP}
+function es(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(d){if(!d)return'';const p=d.split('-');return p[1]+'/'+p[2]}
+function fmtDateMMDD(d){if(!d)return'0000';const p=d.split('-');return p[1]+p[2]}
+function fmtDateRange(m){if(!m.startDate)return'';if(m.endDate&&m.endDate!==m.startDate)return fmtDate(m.startDate)+'~'+fmtDate(m.endDate);return fmtDate(m.startDate)}
+function getStartDate(m){return m.startDate||m.date||(m.extData&&m.extData.startDate)||''}
+function getEndDate(m){return m.endDate||m.startDate||m.date||(m.extData&&m.extData.endDate)||''}
+function todayStr(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
+function todayDate(){const t=new Date();t.setHours(0,0,0,0);return t}
+function parseDate(s){if(!s)return null;const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function nodeDeadline(meeting,node){
+  if(node.customDeadline&&meeting.type==='外部会议'){
+    if(!meeting.extData)return null;
+    const dlMap={ext_invite:'inviteDeadline',ext_replace:'replaceDeadline',ext_travel:'travelDeadline'};
+    const key=dlMap[node.id];
+    return key&&meeting.extData[key]?parseDate(meeting.extData[key]):null;
+  }
+  const md=parseDate(getStartDate(meeting));if(!md)return null;const d=new Date(md);d.setDate(d.getDate()+(node.deadlineDays||0));return d;
+}
+function isNodeOverdue(meeting,node){const dl=nodeDeadline(meeting,node);if(!dl)return false;const st=(meeting.progress&&meeting.progress[node.id])||'pending';return todayDate()>dl&&st!=='done'}
+function countOverdue(meeting){const sop=getSOP(meeting.type);return sop.filter(n=>isNodeOverdue(meeting,n)).length}
+function getProgress(meeting){const sop=getSOP(meeting.type);let done=0;sop.forEach(n=>{if(meeting.progress&&meeting.progress[n.id]==='done')done++});return {done,total:sop.length,pct:sop.length>0?Math.round(done/sop.length*100):0}}
+function getPhaseProgress(meeting,phase){const sop=getSOP(meeting.type).filter(n=>n.phase===phase);let done=0;sop.forEach(n=>{if(meeting.progress&&meeting.progress[n.id]==='done')done++});return {done,total:sop.length,pct:sop.length>0?Math.round(done/sop.length*100):0}}
+function pctClass(pct){return pct>=80?'pct-high':pct>=50?'pct-mid':'pct-low'}
+function activeMeetings(){return state.meetings.filter(m=>m.status!=='已完成')}
+
+// ============ Planned Meeting Linkage ============
+function matchPlannedMeeting(meetingName){
+  if(!state.plannedMeetings||!state.plannedMeetings.length)return null;
+  const sorted=[...state.plannedMeetings].sort((a,b)=>b.name.length-a.name.length);
+  for(let pm of sorted){
+    if(meetingName.includes(pm.name)||pm.name.includes(meetingName))return pm;
+  }
+  return null;
+}
+function countCreatedSessions(pm){
+  return state.meetings.filter(m=>m.name.includes(pm.name)||pm.name.includes(m.name)).length;
+}
+function getLinkedMeetings(pm){
+  return state.meetings.filter(m=>m.name.includes(pm.name)||pm.name.includes(m.name));
+}
+function getPlannedStatus(pm){
+  const created=countCreatedSessions(pm);
+  if(created===0)return{status:'待开展',cls:'tag-pending',sessions:'0/'+pm.totalSessions,created:0};
+  if(pm.totalSessions>1&&created<pm.totalSessions){
+    return{status:'待开展',cls:'tag-pending',sessions:created+'/'+pm.totalSessions,created:created};
+  }
+  return{status:'规划中',cls:'tag-planning',sessions:created+'/'+pm.totalSessions,created:created};
+}
+function updatePlannedBadge(){
+  const pending=state.plannedMeetings?state.plannedMeetings.filter(pm=>getPlannedStatus(pm).status==='待开展').length:0;
+  const badge=document.getElementById('plannedBadge');
+  if(badge){
+    if(pending>0){badge.textContent=pending;badge.style.display='inline-block'}else{badge.style.display='none'}
+  }
+}
+
+// Check linkage when typing meeting name in modal
+function checkPlannedLinkage(){
+  const name=document.getElementById('meetingName').value.trim();
+  const hint=document.getElementById('linkageHint');
+  if(!name||name.length<2){hint.classList.remove('show');return}
+  const pm=matchPlannedMeeting(name);
+  if(pm){
+    const st=getPlannedStatus(pm);
+    const isEdit=document.getElementById('editId').value!=='';
+    if(!isEdit){
+      const nextCreated=st.created+1;
+      if(pm.totalSessions>1){
+        if(nextCreated<pm.totalSessions){
+          hint.innerHTML='🔗 关联待开展系列「'+es(pm.name)+'」→ 创建后 '+nextCreated+'/'+pm.totalSessions+'，保持待开展';
+        }else{
+          hint.innerHTML='🔗 关联待开展系列「'+es(pm.name)+'」→ 创建后 '+nextCreated+'/'+pm.totalSessions+'，全部场次规划完毕 → 规划中';
+        }
+      }else{
+        hint.innerHTML='🔗 关联待开展会议「'+es(pm.name)+'」→ 创建后自动变更为「规划中」';
+      }
+      hint.classList.add('show');
+    }else{
+      hint.classList.remove('show');
+    }
+  }else{
+    hint.classList.remove('show');
+  }
+}
+
+// ============ Detail Page Link ============
+function getDetailPageUrl(uid){
+  const base=window.location.href.replace(/[^/]+$/,'');
+  return base+'meeting_detail.html#'+uid;
+}
+function copyDetailLink(uid){
+  const url=getDetailPageUrl(uid);
+  navigator.clipboard.writeText(url).then(()=>{
+    showToast('✅ 单场会议链接已复制！密码为会议日期(如0712)');
+    const btn=document.querySelector('.mini-btn[data-uid="'+uid+'"]');
+    if(btn){btn.textContent='已复制✓';btn.classList.add('copy-ok');setTimeout(()=>{btn.textContent='📋 单场链接';btn.classList.remove('copy-ok')},2000)}
+  }).catch(()=>{
+    prompt('请手动复制以下链接（密码为会议日期MMDD）:',url);
+  });
+}
+function openDetailPage(uid){
+  const url=getDetailPageUrl(uid);
+  window.open(url,'_blank');
+}
+
+// ============ Toast ============
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ============ Cloud Sync Polling ============
+window.addEventListener('storage',function(e){
+  if(e.key===STORAGE_KEY&&e.newValue){
+    try{
+      const newState=JSON.parse(e.newValue);
+      if(newState&&newState.meetings){
+        state=normalizeState(newState);
+        _cloudHash=JSON.stringify(state);
+        refreshAll();
+      }
+    }catch(err){}
+  }
+});
+
+// Server polling for cross-device sync (every 15 seconds)
+setInterval(async ()=>{
+  if(_cloudSyncing || !passwordVerified) return;
+  const serverData = await cloudLoad();
+  if(!serverData || !serverData.meetings){
+    // Cloud unreachable - ensure local backup is current
+    if(passwordVerified) autoBackup();
+    return;
+  }
+  const serverHash = JSON.stringify(serverData);
+  if(_cloudHash && serverHash !== _cloudHash){
+    _cloudSyncing = true;
+    state = normalizeState(serverData);
+    _cloudHash = serverHash;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    autoBackup();
+    refreshAll();
+    updateSyncIndicator('synced');
+    _cloudSyncing = false;
+  } else if(!_cloudHash){
+    _cloudHash = serverHash;
+  }
+}, 15000);
+
+function refreshAll(){
+  renderMeetingList();
+  renderSummary();
+  renderPlannedMeetings();
+  updatePlannedBadge();
+  const activeMeeting=state.meetings.find(m=>m._active);
+  if(activeMeeting){
+    const idx=state.meetings.indexOf(activeMeeting);
+    renderProgress(idx);
+  }
+  const activeTab=document.querySelector('.tab.active');
+  if(activeTab){
+    if(activeTab.dataset.tab==='gantt')renderGantt();
+    if(activeTab.dataset.tab==='calendar')renderCalendar();
+  }
+}
+
+// ============ Render: Meeting List ============
+function renderMeetingList(){
+  const el=document.getElementById('meetingList');
+  if(!state.meetings.length){
+    el.innerHTML='<div class="empty-state"><p style="font-size:12px">暂无会议，点击下方新增</p></div>';
+    return;
+  }
+  // Sort by date ascending (earliest first), no-date goes last
+  let meetings=[...state.meetings].map((m,i)=>({m,i}));
+  meetings.sort((a,b)=>{
+    const da=getStartDate(a.m)||'9999-12-31';
+    const db=getStartDate(b.m)||'9999-12-31';
+    return da.localeCompare(db);
+  });
+  // Filter by status
+  if(meetingFilter){
+    meetings=meetings.filter(x=>x.m.status===meetingFilter);
+  }
+  if(!meetings.length){
+    el.innerHTML='<div class="empty-state"><p style="font-size:12px;color:var(--text3)">无「'+meetingFilter+'」状态的会议</p></div>';
+    return;
+  }
+  el.innerHTML=meetings.map(x=>{
+    const m=x.m; const i=state.meetings.indexOf(m);
+    const p=getProgress(m);
+    const overdue=countOverdue(m);
+    const typeTag=m.type==='线下'?'tag-offline':m.type==='线上'?'tag-online':'tag-external';
+    const statusTag=m.status==='已完成'?'tag-done':m.status==='进行中'?'tag-ongoing':'tag-planning';
+    const pm=matchPlannedMeeting(m.name);
+    return `<div class="meeting-card${m._active?' active':''}" data-idx="${i}" onclick="selectMeeting(${i})">
+      ${overdue>0?`<span class="badge-warn">${overdue}项逾期</span>`:(pm?`<span class="badge-link">🔗${es(pm.name)}</span>`:'')}
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="name">${es(m.name)}</span>
+        <span class="tag ${typeTag}">${m.type}</span>
+      </div>
+      <div class="meta-row">
+        <span>${m.dm||'-'}</span><span>${m.city||'-'}</span><span>${fmtDateRange(m)}</span>
+        <span class="tag ${statusTag}">${m.status}</span>
+      </div>
+      ${m.type==='外部会议'&&m.extData?`<div style="font-size:10px;color:var(--teal);margin-top:2px">名额${getExtTotalQuota(m)} · 已邀${getExtTotalInvited(m)}</div>`:''}
+      <div class="progress-mini"><div class="progress-mini-fill" style="width:${p.pct}%"></div></div>
+      <div class="mcard-actions" onclick="event.stopPropagation()">
+        <button class="mini-btn" data-uid="${m.uid}" onclick="copyDetailLink('${m.uid}')" title="复制单场会议跟进链接，密码为会议日期(如0712)">📋 单场链接</button>
+        <button class="mini-btn" onclick="openDetailPage('${m.uid}')" title="在新窗口打开单场会议页面">🔗 打开</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f){
+  meetingFilter=f;
+  document.querySelectorAll('.meeting-filter .fbtn').forEach(b=>{
+    b.classList.toggle('active',b.textContent===f||(f===''&&b.textContent==='全部'));
+  });
+  renderMeetingList();
+}
+
+function selectMeeting(idx){
+  state.meetings.forEach(m=>m._active=false);
+  state.meetings[idx]._active=true;
+  renderMeetingList();
+  renderProgress(idx);
+  switchTab('progress');
+}
+
+// ============ Render: SOP Progress ============
+function renderProgress(idx){
+  const m=state.meetings[idx];
+  if(!m)return;
+  const sop=getSOP(m.type);
+  const p=getProgress(m);
+  const overdueCount=countOverdue(m);
+  const isExternal=m.type==='外部会议';
+
+  let html='';
+  if(overdueCount>0){
+    html+=`<div class="alert-banner"><span class="icon">⚠️</span>该会议有 <strong style="color:var(--amber)">${overdueCount}</strong> 个节点已逾期</div>`;
+  }
+
+  const pm=matchPlannedMeeting(m.name);
+  if(pm){
+    const linked=getLinkedMeetings(pm);
+    const st=getPlannedStatus(pm);
+    html+=`<div class="pm-linkage-notice"><span>🔗</span> 关联待开展会议「<strong>${es(pm.name)}</strong>」 · 系列进度 ${st.sessions} · ${pm.totalSessions>1?'系列会议':'单场会议'} · 来源: ${es(pm.source||'-')}</div>`;
+  }
+
+  html+=`<div class="progress-bar-wrap">
+    <div class="progress-bar-header">
+      <div>
+        <span class="progress-bar-label">${es(m.name)} · ${m.type}会议</span>
+        <span style="font-size:12px;color:var(--text3);margin-left:8px">${m.dm||''} ${m.city||''} ${fmtDateRange(m)||''} | 总监: ${m.director||'-'}</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-sm btn-share" onclick="copyDetailLink('${m.uid}')" title="复制单场链接给会议总监">📋 复制跟进链接</button>
+        <span class="progress-bar-pct">${p.pct}%</span>
+      </div>
+    </div>
+    <div class="progress-bar-track"><div class="progress-bar-fill ${pctClass(p.pct)}" style="width:${p.pct}%"></div></div>`;
+
+  if(isExternal){
+    const ext=m.extData||{};
+    ensureDmQuota(ext);
+    const totalQ=getExtTotalQuota(m),totalI=getExtTotalInvited(m);
+    const invitePct=totalQ>0?Math.round(totalI/totalQ*100):0;
+    html+=`<div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;align-items:center">
+      <span>📋 总名额: <strong>${totalQ}</strong>人</span>
+      <span>✉️ 已邀请: <strong style="color:var(--teal)">${totalI}</strong>人</span>
+      <span>📊 邀请进度: <strong style="color:${invitePct>=100?'var(--green)':invitePct>=50?'var(--amber)':'var(--red)'}">${invitePct}%</strong></span>
+      ${overdueCount>0?`<span style="color:var(--amber);font-weight:500">| 逾期 ${overdueCount} 项</span>`:''}
+    </div>`;
+    // Per-DM quota breakdown table
+    const dq=(ext.dmQuota)||{},di=(ext.dmInvited)||{};
+    const dmRows=DM_QUOTA_LIST.map(d=>{
+      const q=dq[d.name]||0,inv=di[d.name]||0;
+      if(q===0&&inv===0)return '';
+      const pct=q>0?Math.round(inv/q*100):0;
+      const pctColor=pct>=100?'var(--green)':pct>=50?'var(--amber)':'var(--red)';
+      return `<tr>
+        <td style="padding:3px 8px;border-bottom:1px solid var(--border)">${d.team!=='-'?d.team+' - ':''}${d.name}</td>
+        <td style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border)">${q}</td>
+        <td style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border);color:var(--teal)">${inv}</td>
+        <td style="text-align:center;padding:3px 8px;border-bottom:1px solid var(--border);color:${pctColor}">${q>0?pct+'%':'-'}</td>
+      </tr>`;
+    }).join('');
+    if(dmRows){
+      html+=`<div style="margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--bg)">
+            <th style="text-align:left;padding:4px 8px;border-bottom:2px solid var(--border)">DM名额明细</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:2px solid var(--border)">名额</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:2px solid var(--border)">已邀</th>
+            <th style="text-align:center;padding:4px 8px;border-bottom:2px solid var(--border)">进度</th>
+          </tr></thead>
+          <tbody>${dmRows}</tbody>
+        </table>
+      </div>`;
+    }
+  }else{
+    html+=`<div style="margin-top:6px;font-size:12px;color:var(--text3)">
+      已完成 ${p.done}/${p.total} | 会前 ${getPhaseProgress(m,'pre').done}/${getPhaseProgress(m,'pre').total} · 会中 ${getPhaseProgress(m,'during').done}/${getPhaseProgress(m,'during').total} · 会后 ${getPhaseProgress(m,'post').done}/${getPhaseProgress(m,'post').total}
+      ${overdueCount>0?` | <span style="color:var(--amber);font-weight:500">逾期 ${overdueCount} 项</span>`:''}
+    </div>`;
+  }
+  html+=`</div>`;
+
+  if(isExternal){
+    html+=`<div class="phase-section"><span class="phase-title phase-pre">外部会议邀请管理 (${sop.length}项)</span><div class="node-grid">`;
+    sop.forEach(n=>{
+      const st=(m.progress&&m.progress[n.id])||'pending';
+      const overdue=isNodeOverdue(m,n);
+      let rowCls='',statusCls='',statusIcon='○';
+      if(st==='done'){rowCls='done';statusCls='done';statusIcon='✓'}
+      else if(st==='progress'){rowCls='progress';statusCls='progress';statusIcon='◉'}
+      if(overdue&&!rowCls)rowCls='overdue';
+      const dl=nodeDeadline(m,n);
+      const dlStr=dl?`${dl.getMonth()+1}/${dl.getDate()}`:'未设定';
+      html+=`<div class="node-row ${rowCls}" onclick="toggleNode(${idx},'${n.id}')" title="点击切换状态">
+        <div class="node-status ${statusCls}">${statusIcon}</div>
+        <span class="node-time">📅</span>
+        <span class="node-stage">${n.stage}</span>
+        <span class="node-task">${n.task}</span>
+        <span class="node-owner">${n.owner}</span>
+        <span class="node-deadline">截止: ${dlStr}</span>
+      </div>`;
+    });
+    html+='</div></div>';
+  }else{
+    const phases=[
+    {key:'pre',title:'会前筹备',cls:'phase-pre',nodes:sop.filter(n=>n.phase==='pre')},
+    {key:'during',title:'会中执行',cls:'phase-during',nodes:sop.filter(n=>n.phase==='during')},
+    {key:'post',title:'会后跟进',cls:'phase-post',nodes:sop.filter(n=>n.phase==='post')}
+  ];
+  phases.forEach(ph=>{
+    if(!ph.nodes.length)return;
+    html+=`<div class="phase-section"><span class="phase-title ${ph.cls}">${ph.title} (${ph.nodes.length}项)</span><div class="node-grid">`;
+    ph.nodes.forEach(n=>{
+      const st=(m.progress&&m.progress[n.id])||'pending';
+      const overdue=isNodeOverdue(m,n);
+      let rowCls='',statusCls='',statusIcon='○';
+      if(st==='done'){rowCls='done';statusCls='done';statusIcon='✓'}
+      else if(st==='progress'){rowCls='progress';statusCls='progress';statusIcon='◉'}
+      if(overdue&&!rowCls)rowCls='overdue';
+      const dl=nodeDeadline(m,n);
+      const dlStr=dl?`${dl.getMonth()+1}/${dl.getDate()}`:'-';
+      html+=`<div class="node-row ${rowCls}" onclick="toggleNode(${idx},'${n.id}')" title="点击切换状态">
+        <div class="node-status ${statusCls}">${statusIcon}</div>
+        <span class="node-time">${n.time}</span>
+        <span class="node-stage">${n.stage}</span>
+        <span class="node-task">${n.task}</span>
+        <span class="node-owner">${n.owner}</span>
+        <span class="node-deadline">截止: ${dlStr}</span>
+      </div>`;
+    });
+    html+='</div></div>';
+  });
+  }
+  html+=`<div style="text-align:center;margin-top:16px">
+    <button class="btn btn-sm" onclick="openModal(${idx})">编辑会议</button>
+    <button class="btn btn-sm btn-danger" onclick="deleteMeeting(${idx})" style="margin-left:8px">删除会议</button>
+  </div>`;
+  document.getElementById('progressContent').innerHTML=html;
+}
+
+function toggleNode(idx,nodeId){
+  const m=state.meetings[idx];
+  if(!m.progress)m.progress={};
+  const cur=m.progress[nodeId]||'pending';
+  m.progress[nodeId]=cur==='pending'?'progress':cur==='progress'?'done':'pending';
+  saveState();
+  renderMeetingList();
+  renderProgress(idx);
+}
+
+// ============ Render: Planned Meetings ============
+function renderPlannedMeetings(){
+  const el=document.getElementById('plannedContent');
+  if(!state.plannedMeetings)state.plannedMeetings=[];
+  if(!state.plannedMeetings.length){
+    el.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>暂无待开展会议</p><p style="font-size:12px;color:var(--text3);margin-top:8px">录入计划中的会议/系列会议<br>新建会议时名称匹配会自动联动</p></div>'+
+    '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" style="font-size:15px;padding:10px 28px" onclick="openPlannedModal()">+ 新增待开展会议</button></div>';
+    return;
+  }
+
+  let pendingCount=0,planningCount=0,seriesCount=0,singleCount=0;
+  state.plannedMeetings.forEach(pm=>{
+    const st=getPlannedStatus(pm);
+    if(st.status==='待开展')pendingCount++;else planningCount++;
+    if(pm.totalSessions>1)seriesCount++;else singleCount++;
+  });
+
+  let html=`<div class="planned-summary">
+    <div class="stat-card"><div class="label">待开展总数</div><div class="value">${state.plannedMeetings.length}</div><div class="sub">单场 ${singleCount} · 系列 ${seriesCount}</div></div>
+    <div class="stat-card"><div class="label">待开展</div><div class="value" style="color:var(--teal)">${pendingCount}</div><div class="sub">尚未创建或未全部创建</div></div>
+    <div class="stat-card"><div class="label">已规划</div><div class="value" style="color:var(--amber)">${planningCount}</div><div class="sub">单场已创建或系列全部创建</div></div>
+    <div class="stat-card"><div class="label">总计划场次</div><div class="value">${state.plannedMeetings.reduce((s,pm)=>s+pm.totalSessions,0)}</div><div class="sub">已创建 ${state.plannedMeetings.reduce((s,pm)=>s+countCreatedSessions(pm),0)}</div></div>
+  </div>`;
+
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3>待开展会议总览</h3><button class="btn btn-primary" style="font-size:13px;padding:8px 20px" onclick="openPlannedModal()">+ 新增待开展</button></div>';
+
+  html+='<div class="table-wrap"><table class="planned-table"><thead><tr>'+
+    '<th>会议/系列名称</th><th>计划场次</th><th>创建进度</th><th>形式</th><th>状态</th><th>来源</th><th>已关联会议</th><th>操作</th>'+
+    '</tr></thead><tbody>';
+
+  state.plannedMeetings.forEach((pm,i)=>{
+    const st=getPlannedStatus(pm);
+    const linked=getLinkedMeetings(pm);
+    const formTag=pm.form==='线下'?'pm-form-offline':pm.form==='线上'?'pm-form-online':'pm-form-any';
+    const sessionCls=st.created===0?'':(st.created>=pm.totalSessions?'all-done':'partial');
+
+    html+=`<tr>
+      <td class="pm-name">${es(pm.name)}${pm.note?'<br><span style="font-size:11px;color:var(--text3)">'+es(pm.note)+'</span>':''}</td>
+      <td class="pm-sessions">${pm.totalSessions}场${pm.totalSessions>1?' <span style="font-size:11px;color:var(--text3)">(系列)</span>':' <span style="font-size:11px;color:var(--text3)">(单场)</span>'}</td>
+      <td><span class="session-bar ${sessionCls}">${st.sessions}</span>${st.created>0&&st.created<pm.totalSessions?' <span style="font-size:11px;color:var(--amber)">剩'+(pm.totalSessions-st.created)+'</span>':''}</td>
+      <td><span class="pm-form-tag ${formTag}">${pm.form||'不限'}</span></td>
+      <td><span class="tag ${st.cls}">${st.status}</span></td>
+      <td class="pm-source">${es(pm.source||'-')}</td>
+      <td>`;
+    if(linked.length){
+      html+='<div class="pm-linked-meetings">'+linked.map(m=>'• '+es(m.name)+' ('+fmtDateRange(m)+')').join('<br>')+'</div>';
+    }else{
+      html+='<span style="font-size:11px;color:var(--text3)">—</span>';
+    }
+    html+=`</td>
+      <td><div class="pm-actions">
+        <button class="btn btn-sm" onclick="openPlannedModal(${i})">编辑</button>
+        <button class="btn btn-sm btn-danger" onclick="deletePlannedMeeting(${i})">删除</button>
+      </div></td>
+    </tr>`;
+  });
+
+  html+='</tbody></table></div>';
+
+  html+='<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" style="font-size:13px;padding:8px 24px" onclick="openPlannedModal()">+ 继续新增待开展</button></div>';
+
+  html+=`<div style="margin-top:16px;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2)">
+    <strong>联动规则说明：</strong><br>
+    • <strong>单场会议</strong>（计划1场）：新建会议名称包含待开展名称 → 自动变更为「规划中」<br>
+    • <strong>系列会议</strong>（计划多场）：每新建一场 → 进度 +1（如 1/3），全部创建完毕 → 「规划中」<br>
+    • 匹配规则：新建会议名称 <strong>包含</strong> 待开展名称即自动关联（如「治痛梦工坊第一期」匹配「治痛梦工坊」）
+  </div>`;
+
+  el.innerHTML=html;
+}
+
+// ============ Planned Meeting Modal ============
+function openPlannedModal(idx){
+  const modal=document.getElementById('plannedModal');
+  if(idx!==undefined){
+    document.getElementById('plannedModalTitle').textContent='编辑待开展会议';
+    const pm=state.plannedMeetings[idx];
+    document.getElementById('pmEditId').value=idx;
+    document.getElementById('pmName').value=pm.name;
+    document.getElementById('pmSessions').value=pm.totalSessions;
+    document.getElementById('pmForm').value=pm.form||'不限';
+    document.getElementById('pmSource').value=pm.source||'年度会议计划';
+    document.getElementById('pmNote').value=pm.note||'';
+  }else{
+    document.getElementById('plannedModalTitle').textContent='新增待开展会议';
+    document.getElementById('pmEditId').value='';
+    document.getElementById('pmName').value='';
+    document.getElementById('pmSessions').value='1';
+    document.getElementById('pmForm').value='不限';
+    document.getElementById('pmSource').value='年度会议计划';
+    document.getElementById('pmNote').value='';
+  }
+  modal.classList.add('show');
+}
+function closePlannedModal(){document.getElementById('plannedModal').classList.remove('show')}
+function savePlannedMeeting(){
+  const name=document.getElementById('pmName').value.trim();
+  const sessions=parseInt(document.getElementById('pmSessions').value)||1;
+  if(!name){alert('请填写会议/系列名称');return}
+  if(sessions<1){alert('计划场次至少为1');return}
+  const editId=document.getElementById('pmEditId').value;
+  const data={name,totalSessions:sessions,form:document.getElementById('pmForm').value,source:document.getElementById('pmSource').value,note:document.getElementById('pmNote').value.trim()};
+  if(editId!==''){
+    data.id=state.plannedMeetings[parseInt(editId)].id;
+    state.plannedMeetings[parseInt(editId)]=data;
+  }else{
+    data.id=generatePMID();
+    state.plannedMeetings.push(data);
+  }
+  closePlannedModal();saveState();renderPlannedMeetings();updatePlannedBadge();
+  showToast(editId!==''?'✅ 待开展会议已更新':'✅ 待开展会议已添加');
+}
+function deletePlannedMeeting(idx){
+  if(!confirm('确认删除待开展会议「'+state.plannedMeetings[idx].name+'」？'))return;
+  state.plannedMeetings.splice(idx,1);
+  saveState();renderPlannedMeetings();updatePlannedBadge();
+  showToast('已删除');
+}
+
+// ============ Render: Calendar ============
+function renderCalendar(){
+  const el=document.getElementById('calendarContent');
+  const year=calendarMonth.getFullYear();
+  const month=calendarMonth.getMonth();
+  const today=todayStr();
+  const todayDateObj=todayDate();
+
+  let meetings=state.meetings.filter(m=>getStartDate(m));
+  if(calendarDMFilter)meetings=meetings.filter(m=>m.dm===calendarDMFilter);
+  const firstDay=new Date(year,month,1);
+  const lastDay=new Date(year,month+1,0);
+  const monthMeetings=meetings.filter(m=>{
+    const s=parseDate(getStartDate(m));
+    const e=parseDate(getEndDate(m));
+    return s<=lastDay&&e>=firstDay;
+  }).sort((a,b)=>getStartDate(a).localeCompare(getStartDate(b)));
+
+  const byDate={};
+  monthMeetings.forEach(m=>{
+    const s=parseDate(getStartDate(m));
+    const e=parseDate(getEndDate(m));
+    for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){
+      if(d.getFullYear()===year&&d.getMonth()===month){
+        const day=d.getDate();
+        if(!byDate[day])byDate[day]=[];
+        byDate[day].push(m);
+      }
+    }
+  });
+
+  const startWeekday=firstDay.getDay();
+  const daysInMonth=lastDay.getDate();
+  const weekDays=['日','一','二','三','四','五','六'];
+
+  let html='<div class="cal-header">';
+  html+='<div class="cal-nav">';
+  html+='<button onclick="calPrev()">‹ 上月</button>';
+  html+='<span class="cal-title">'+year+'年'+(month+1)+'月</span>';
+  html+='<button onclick="calNext()">下月 ›</button>';
+  html+='<button onclick="calToday()" style="margin-left:8px;font-size:12px">今天</button>';
+  html+='</div>';
+  html+='<div class="cal-filter">';
+  html+='<span>DM筛选:</span>';
+  html+='<select onchange="setCalDMFilter(this.value)">';
+  html+='<option value="">全部</option>';
+  ['何方禹','孟鈃','郑家成','李路','张鑫','卜先峰'].forEach(dm=>{
+    html+=`<option value="${dm}" ${calendarDMFilter===dm?'selected':''}>${dm}</option>`;
+  });
+  html+='</select>';
+  html+=`<span style="margin-left:8px;color:var(--text3)">本月 ${monthMeetings.length} 场</span>`;
+  html+='</div>';
+  html+='</div>';
+
+  html+='<div class="cal-grid">';
+  weekDays.forEach(d=>{html+=`<div class="cal-hd">${d}</div>`});
+
+  for(let i=0;i<startWeekday;i++){
+    const prevMonth=new Date(year,month,0);
+    const day=prevMonth.getDate()-startWeekday+i+1;
+    html+=`<div class="cal-cell other-month"><div class="cal-day">${day}</div></div>`;
+  }
+
+  for(let day=1;day<=daysInMonth;day++){
+    const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const isToday=dateStr===today;
+    const dayMeetings=byDate[day]||[];
+    let cellCls='cal-cell'+(isToday?' today':'');
+    html+=`<div class="${cellCls}"><div class="cal-day">${day}</div>`;
+    dayMeetings.forEach(m=>{
+      const cls=m.type==='线下'?'offline':m.type==='线上'?'online':'external';
+      const doneCls=m.status==='已完成'?' done':'';
+      const idx=state.meetings.indexOf(m);
+      html+=`<div class="cal-meeting ${cls}${doneCls}" onclick="selectMeeting(${idx})" title="${es(m.name)} · ${m.type} · ${m.dm||'-'}">${es(m.name)}</div>`;
+    });
+    html+='</div>';
+  }
+
+  const endWeekday=(startWeekday+daysInMonth-1)%7;
+  if(endWeekday<6){
+    for(let i=1;i<=6-endWeekday;i++){
+      html+=`<div class="cal-cell other-month"><div class="cal-day">${i}</div></div>`;
+    }
+  }
+  html+='</div>';
+
+  html+='<div class="cal-legend">';
+  html+='<span><span class="dot" style="background:var(--purple-bg);border:1px solid var(--purple)"></span>线下</span>';
+  html+='<span><span class="dot" style="background:var(--blue-bg);border:1px solid var(--blue)"></span>线上</span>';
+  html+='<span><span class="dot" style="background:var(--teal-bg);border:1px solid var(--teal)"></span>外部</span>';
+  html+='<span style="color:var(--text3)">点击日历中的会议可跳转到SOP进度看板</span>';
+  html+='</div>';
+
+  el.innerHTML=html;
+}
+function calPrev(){calendarMonth.setMonth(calendarMonth.getMonth()-1);renderCalendar()}
+function calNext(){calendarMonth.setMonth(calendarMonth.getMonth()+1);renderCalendar()}
+function calToday(){calendarMonth=new Date();renderCalendar()}
+function setCalDMFilter(v){calendarDMFilter=v;renderCalendar()}
+
+// ============ Render: Gantt ============
+function renderGantt(){
+  const active=activeMeetings();
+  if(!active.length){
+    document.getElementById('ganttContent').innerHTML='<div class="empty-state"><div class="icon">📊</div><p>暂无进行中/筹备中的会议</p><p style="font-size:12px;color:var(--text3)">已完成的会议不显示在甘特图中</p></div>';
+    return;
+  }
+  const PRE_DAYS=60,POST_DAYS=7,TOTAL_DAYS=PRE_DAYS+POST_DAYS;
+  const today=todayDate();
+
+  let html='<div class="gantt-header"><h3>会议执行甘特图</h3>';
+  html+='<div class="gantt-legend">';
+  html+='<span><span class="dot" style="background:var(--purple)"></span>会前</span>';
+  html+='<span><span class="dot" style="background:var(--orange)"></span>会中</span>';
+  html+='<span><span class="dot" style="background:var(--amber)"></span>会后</span>';
+  html+='<span><span class="dot" style="background:var(--green)"></span>已完成</span>';
+  html+='<span><span class="dot" style="background:var(--teal)"></span>外部会议</span>';
+  html+='<span style="color:var(--red)">│ 今天</span>';
+  html+='<span style="color:var(--yellow);font-weight:500">⚠ 逾期</span>';
+  html+='</div></div>';
+  html+='<div class="gantt-scroll"><table class="gantt-table"><thead><tr>';
+  html+='<th style="min-width:150px">会议信息</th><th style="min-width:180px">阶段进度</th><th style="min-width:400px">时间线（T-60 → T+7）</th><th style="width:60px">完成率</th></tr></thead><tbody>';
+
+  const sorted=[...active].sort((a,b)=>{
+    const aOv=countOverdue(a),bOv=countOverdue(b);
+    if(aOv>0&&bOv===0)return -1;if(bOv>0&&aOv===0)return 1;
+    if(aOv!==bOv)return bOv-aOv;
+    if(getStartDate(a)&&getStartDate(b))return getStartDate(a).localeCompare(getStartDate(b));
+    return 0;
+  });
+
+  sorted.forEach(m=>{
+    const sop=getSOP(m.type);
+    const p=getProgress(m);
+    const pp=getPhaseProgress(m,'pre'),dp=getPhaseProgress(m,'during'),pop=getPhaseProgress(m,'post');
+    const overdue=countOverdue(m);
+    const md=parseDate(getStartDate(m));
+    const isExt=m.type==='外部会议';
+    const typeTag=isExt?'tag-external':m.type==='线下'?'tag-offline':'tag-online';
+    const extData=m.extData||{};
+    let barStart,barEnd,barRange;
+    if(isExt){
+      barStart=parseDate(getStartDate(m));
+      barEnd=parseDate(getEndDate(m));
+      barRange=barEnd-barStart;
+      if(barRange<=0){barRange=86400000;barEnd=new Date(barStart.getTime()+barRange)}
+    }else{
+      barStart=new Date(md);barStart.setDate(barStart.getDate()-PRE_DAYS);
+      barEnd=new Date(md);barEnd.setDate(barEnd.getDate()+POST_DAYS);
+      barRange=barEnd-barStart;
+    }
+    const todayPos=today>=barStart&&today<=barEnd?((today-barStart)/barRange*100):(today<barStart?0:100);
+    const preEnd=(PRE_DAYS/TOTAL_DAYS)*100;
+    const duringEnd=((PRE_DAYS+1)/TOTAL_DAYS)*100;
+    const donePct=(p.pct/100)*100;
+
+    const milestones={};
+    if(isExt){
+      // External meeting: custom deadline milestones
+      sop.forEach(n=>{
+        const dl=nodeDeadline(m,n);
+        if(dl){
+          const pos=((dl-barStart)/barRange*100);
+          milestones[n.id]={pos,isOverdue:isNodeOverdue(m,n),_orig:n};
+        }
+      });
+    }else{
+      sop.forEach(n=>{
+        const key=n.deadlineDays;
+        if(!milestones[key]||sop.indexOf(n)<sop.indexOf(milestones[key]._orig)){
+          const pos=((PRE_DAYS+n.deadlineDays)/TOTAL_DAYS)*100;
+          milestones[key]={pos,isOverdue:isNodeOverdue(m,n),_orig:n};
+        }
+      });
+    }
+
+    html+=`<tr>
+      <td class="gantt-name"><div>${es(m.name)}</div><small><span class="tag ${typeTag}">${m.type}</span> ${m.dm||'-'} · ${fmtDateRange(m)}</small>
+      ${overdue>0?`<br><span class="gantt-stat overdue">⚠ ${overdue}项逾期</span>`:''}
+      ${isExt&&m.extData?`<br><span style="font-size:11px;color:var(--teal)">名额${getExtTotalQuota(m)}·已邀${getExtTotalInvited(m)}</span>`:''}
+      </td>
+      <td><div class="gantt-stats">
+        ${isExt?
+          `<span class="gantt-stat pre-done">邀请 ${pp.done}/${pp.total}</span>`:
+          `<span class="gantt-stat pre-done">会前 ${pp.done}/${pp.total}</span>
+           <span class="gantt-stat during-done">会中 ${dp.done}/${dp.total}</span>
+           <span class="gantt-stat post-done">会后 ${pop.done}/${pop.total}</span>`
+        }
+      </div></td>
+      <td><div class="gantt-bar-wrap">
+        <div class="gantt-bar" style="left:0;width:100%">
+          ${isExt?
+            `<div class="bar-pre" style="width:100%"></div>`:
+            `<div class="bar-pre" style="width:${preEnd}%"></div>
+             <div class="bar-during" style="width:${duringEnd-preEnd}%"></div>
+             <div class="bar-post" style="width:${100-duringEnd}%"></div>`
+          }
+        </div>
+        ${donePct>0?`<div class="gantt-bar-done" style="width:${donePct}%"></div>`:''}
+        ${todayPos>=0&&todayPos<=100?`<div class="gantt-bar-today" style="left:${todayPos}%"></div>`:''}
+        ${Object.values(milestones).map(ms=>`<div class="gantt-milestone${ms.isOverdue?' late':''}" style="left:${ms.pos}%" title="${ms.isOverdue?'逾期: ':''}${es(ms._orig.stage)}"></div>`).join('')}
+      </div></td>
+      <td style="font-weight:500;color:var(--${pctClass(p.pct)==='pct-high'?'green':'amber'})">${p.pct}%</td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  html+=`<div style="margin-top:16px;font-size:12px;color:var(--text2)">共 <strong>${active.length}</strong> 场进行中 | 逾期 <strong style="color:var(--amber)">${active.reduce((s,m)=>s+countOverdue(m),0)}</strong> 项 | 已完成 ${state.meetings.filter(m=>m.status==='已完成').length} 场不显示</div>`;
+  document.getElementById('ganttContent').innerHTML=html;
+}
+
+// ============ Render: Summary ============
+function renderSummary(){
+  if(!state.meetings.length){
+    document.getElementById('summaryContent').innerHTML='<div class="empty-state"><p>暂无会议数据</p></div>';
+    return;
+  }
+  let totalNodes=0,doneNodes=0,totalOverdue=0;
+  const dmStats={};
+  state.meetings.forEach(m=>{
+    const sop=getSOP(m.type);
+    totalNodes+=sop.length;
+    sop.forEach(n=>{if(m.progress&&m.progress[n.id]==='done')doneNodes++});
+    const ov=countOverdue(m);totalOverdue+=ov;
+    const dm=m.dm||'未分配';
+    if(!dmStats[dm])dmStats[dm]={total:0,done:0,meetings:0,overdue:0};
+    dmStats[dm].meetings++;dmStats[dm].total+=sop.length;
+    sop.forEach(n=>{if(m.progress&&m.progress[n.id]==='done')dmStats[dm].done++});
+    dmStats[dm].overdue+=ov;
+  });
+  const overallPct=totalNodes>0?Math.round(doneNodes/totalNodes*100):0;
+
+  let html=`<div class="summary-row">
+    <div class="stat-card"><div class="label">会议总数</div><div class="value">${state.meetings.length}</div><div class="sub">线下 ${state.meetings.filter(m=>m.type==='线下').length} / 线上 ${state.meetings.filter(m=>m.type==='线上').length} / 外部 ${state.meetings.filter(m=>m.type==='外部会议').length}</div></div>
+    <div class="stat-card"><div class="label">SOP节点总数</div><div class="value">${totalNodes}</div><div class="sub">已完成 ${doneNodes} · 逾期 ${totalOverdue}</div></div>
+    <div class="stat-card"><div class="label">整体完成率</div><div class="value" style="color:${overallPct>=80?'var(--green)':overallPct>=50?'var(--amber)':'var(--red)'}">${overallPct}%</div></div>
+    <div class="stat-card"><div class="label">状态分布</div><div class="value" style="font-size:18px">${state.meetings.filter(m=>m.status==='已完成').length}完 / ${state.meetings.filter(m=>m.status==='进行中').length}行 / ${state.meetings.filter(m=>m.status==='筹备中').length}备</div></div>
+  </div>`;
+
+  html+='<h3 style="margin-bottom:12px">分DM团队统计</h3><div class="table-wrap"><table><thead><tr><th>DM团队</th><th>会议数</th><th>节点总数</th><th>已完成</th><th>逾期</th><th>完成率</th></tr></thead><tbody>';
+  Object.entries(dmStats).sort((a,b)=>b[1].meetings-a[1].meetings).forEach(([dm,s])=>{
+    const pct=s.total>0?Math.round(s.done/s.total*100):0;
+    html+=`<tr><td>${dm}</td><td>${s.meetings}</td><td>${s.total}</td><td>${s.done}</td><td style="color:${s.overdue>0?'var(--amber)':'var(--text2)'}">${s.overdue||'0'}</td><td style="color:${pct>=80?'var(--green)':pct>=50?'var(--amber)':'var(--red)'};font-weight:500">${pct}%</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+
+  html+='<h3 style="margin:16px 0 12px">会议明细</h3><div class="table-wrap"><table><thead><tr><th>会议名称</th><th>类型</th><th>DM</th><th>城市</th><th>日期</th><th>状态</th><th>进度</th><th>逾期</th><th>单场链接</th></tr></thead><tbody>';
+  state.meetings.forEach(m=>{
+    const p=getProgress(m);const ov=countOverdue(m);
+    html+=`<tr><td><b>${es(m.name)}</b></td><td><span class="tag ${m.type==='线下'?'tag-offline':m.type==='线上'?'tag-online':'tag-external'}">${m.type}</span></td><td>${m.dm||'-'}</td><td>${m.city||'-'}</td><td>${fmtDateRange(m)||'-'}</td><td>${m.status}</td><td>${p.pct}% (${p.done}/${p.total})</td><td style="color:${ov>0?'var(--amber)':'var(--text2)'}">${ov>0?ov+'项':'0'}</td><td><button class="btn btn-sm btn-share" onclick="copyDetailLink('${m.uid}')" style="font-size:11px;padding:2px 8px">📋 复制</button></td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  document.getElementById('summaryContent').innerHTML=html;
+}
+
+// ============ Tab Switching ============
+function switchTab(tabName){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById('tab-'+tabName).classList.add('active');
+  if(tabName==='summary')renderSummary();
+  if(tabName==='gantt')renderGantt();
+  if(tabName==='calendar')renderCalendar();
+  if(tabName==='planned')renderPlannedMeetings();
+  if(tabName==='export')exportData();
+}
+
+// ============ Meeting Modal ============
+function openModal(idx){
+  const modal=document.getElementById('modal');
+  if(idx!==undefined){
+    document.getElementById('modalTitle').textContent='编辑会议';
+    const m=state.meetings[idx];
+    document.getElementById('editId').value=idx;
+    document.getElementById('meetingName').value=m.name;
+    document.getElementById('meetingStartDate').value=getStartDate(m);
+    document.getElementById('meetingEndDate').value=getEndDate(m);
+    document.getElementById('meetingType').value=m.type;
+    document.getElementById('meetingDm').value=m.dm||'';
+    document.getElementById('meetingCity').value=m.city||'';
+    document.getElementById('meetingDirector').value=m.director||'';
+    document.getElementById('meetingStatus').value=m.status||'筹备中';
+    document.getElementById('meetingNotes').value=m.notes||'';
+    const ext=m.extData||{};
+    editingExtData=ext;
+    document.getElementById('extInviteDl').value=ext.inviteDeadline||'';
+    document.getElementById('extReplaceDl').value=ext.replaceDeadline||'';
+    document.getElementById('extTravelDl').value=ext.travelDeadline||'';
+  }else{
+    document.getElementById('modalTitle').textContent='新增会议';
+    document.getElementById('editId').value='';
+    document.getElementById('meetingName').value='';
+    document.getElementById('meetingStartDate').value=todayStr();
+    document.getElementById('meetingEndDate').value=todayStr();
+    document.getElementById('meetingType').value='线下';
+    document.getElementById('meetingDm').value='';
+    document.getElementById('meetingCity').value='';
+    document.getElementById('meetingDirector').value='';
+    document.getElementById('meetingStatus').value='筹备中';
+    document.getElementById('meetingNotes').value='';
+    editingExtData={};
+    document.getElementById('extInviteDl').value='';
+    document.getElementById('extReplaceDl').value='';
+    document.getElementById('extTravelDl').value='';
+  }
+  toggleExternalFields();
+  document.getElementById('linkageHint').classList.remove('show');
+  modal.classList.add('show');
+}
+let editingExtData={};
+function renderExtDmQuota(extData){
+  const ext=extData||{};
+  const dq=ext.dmQuota||{},di=ext.dmInvited||{};
+  const body=document.getElementById('extDmQuotaBody');
+  if(!body)return;
+  body.innerHTML=DM_QUOTA_LIST.map(d=>`<tr>
+    <td style="padding:3px 6px">${d.team!=='-'?d.team+' - ':''}${d.name}</td>
+    <td style="text-align:center;padding:3px 6px"><input type="number" id="extDmQ_${d.name}" value="${dq[d.name]||0}" min="0" max="50" style="width:48px;text-align:center;padding:2px 4px;border:1px solid var(--border);border-radius:4px" oninput="updateExtTotals()"></td>
+    <td style="text-align:center;padding:3px 6px"><input type="number" id="extDmI_${d.name}" value="${di[d.name]||0}" min="0" max="50" style="width:48px;text-align:center;padding:2px 4px;border:1px solid var(--border);border-radius:4px" oninput="updateExtTotals()"></td>
+  </tr>`).join('');
+  updateExtTotals();
+}
+function updateExtTotals(){
+  let tq=0,ti=0;
+  DM_QUOTA_LIST.forEach(d=>{
+    const q=document.getElementById('extDmQ_'+d.name);
+    const i=document.getElementById('extDmI_'+d.name);
+    tq+=q?parseInt(q.value)||0:0;
+    ti+=i?parseInt(i.value)||0:0;
+  });
+  const te=document.getElementById('extTotalQuota');
+  const ti2=document.getElementById('extTotalInvited');
+  if(te)te.textContent=tq;
+  if(ti2)ti2.textContent=ti;
+}
+function toggleExternalFields(){
+  const type=document.getElementById('meetingType').value;
+  const ext=document.getElementById('externalFields');
+  ext.style.display=type==='外部会议'?'block':'none';
+  if(type==='外部会议')renderExtDmQuota(editingExtData);
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function saveMeeting(){
+  const name=document.getElementById('meetingName').value.trim();
+  const startDate=document.getElementById('meetingStartDate').value;
+  const endDate=document.getElementById('meetingEndDate').value||startDate;
+  if(!name||!startDate){alert('请填写会议名称和开始日期');return}
+  const editId=document.getElementById('editId').value;
+  const type=document.getElementById('meetingType').value;
+  let data={name,startDate,endDate,date:startDate,type,dm:document.getElementById('meetingDm').value,city:document.getElementById('meetingCity').value.trim(),director:document.getElementById('meetingDirector').value.trim(),status:document.getElementById('meetingStatus').value,notes:document.getElementById('meetingNotes').value.trim(),progress:{}};
+  if(type==='外部会议'){
+    const dmQ={},dmI={};
+    DM_QUOTA_LIST.forEach(d=>{
+      const qEl=document.getElementById('extDmQ_'+d.name);
+      const iEl=document.getElementById('extDmI_'+d.name);
+      dmQ[d.name]=qEl?parseInt(qEl.value)||0:0;
+      dmI[d.name]=iEl?parseInt(iEl.value)||0:0;
+    });
+    const totalQ=DM_QUOTA_LIST.reduce((s,d)=>s+dmQ[d.name],0);
+    const totalI=DM_QUOTA_LIST.reduce((s,d)=>s+dmI[d.name],0);
+    data.extData={
+      dmQuota:dmQ,
+      dmInvited:dmI,
+      quota:totalQ,
+      invited:totalI,
+      inviteDeadline:document.getElementById('extInviteDl').value,
+      replaceDeadline:document.getElementById('extReplaceDl').value,
+      travelDeadline:document.getElementById('extTravelDl').value
+    };
+  }
+  let pmMatch=null,pmBeforeCount=0;
+  if(editId===''){
+    pmMatch=matchPlannedMeeting(name);
+    if(pmMatch)pmBeforeCount=countCreatedSessions(pmMatch);
+  }
+  if(editId!==''){
+    const old=state.meetings[parseInt(editId)];
+    data.progress=old.progress||{};data._active=old._active;data.uid=old.uid||generateUID();
+    if(old.extData)data.extData=Object.assign({},old.extData,data.extData||{});
+    if(old.type!==type){
+      const newSop=getSOP(type);const newIds=new Set(newSop.map(n=>n.id));
+      const cp={};Object.keys(data.progress).forEach(k=>{if(newIds.has(k))cp[k]=data.progress[k]});
+      data.progress=cp;
+    }
+    state.meetings[parseInt(editId)]=data;
+  }else{
+    data.uid=generateUID();
+    state.meetings.push(data);
+  }
+  closeModal();saveState();renderMeetingList();renderSummary();renderGantt();renderPlannedMeetings();updatePlannedBadge();
+  
+  if(pmMatch){
+    const pmAfterCount=countCreatedSessions(pmMatch);
+    if(pmMatch.totalSessions>1){
+      if(pmAfterCount>=pmMatch.totalSessions){
+        showToast('🔗 已关联「'+pmMatch.name+'」'+pmAfterCount+'/'+pmMatch.totalSessions+' → 全部场次规划完毕，变更为规划中');
+      }else{
+        showToast('🔗 已关联「'+pmMatch.name+'」'+pmAfterCount+'/'+pmMatch.totalSessions+'，系列会议保持待开展');
+      }
+    }else{
+      showToast('🔗 已关联「'+pmMatch.name+'」→ 待开展会议变更为规划中');
+    }
+  }
+  
+  const newIdx=state.meetings.findIndex(m=>m.uid===data.uid);
+  if(newIdx>=0){selectMeeting(newIdx)}
+}
+function deleteMeeting(idx){
+  const m=state.meetings[idx];
+  const pm=matchPlannedMeeting(m.name);
+  const pmBefore=pm?countCreatedSessions(pm):0;
+  if(!confirm('确认删除会议「'+m.name+'」？此操作不可恢复。'))return;
+  state.meetings.splice(idx,1);
+  saveState();renderMeetingList();renderSummary();renderGantt();renderPlannedMeetings();updatePlannedBadge();
+  if(pm&&pmBefore>0){
+    const pmAfter=countCreatedSessions(pm);
+    if(pmAfter===0){
+      showToast('⚠ 会议已删除，「'+pm.name+'」回退为待开展 (0/'+pm.totalSessions+')');
+    }else if(pmAfter<pm.totalSessions&&pmBefore>=pm.totalSessions){
+      showToast('⚠ 会议已删除，「'+pm.name+'」回退为待开展 ('+pmAfter+'/'+pm.totalSessions+')');
+    }
+  }
+  document.getElementById('progressContent').innerHTML='<div class="empty-state"><div class="icon">📋</div><p>请从左侧选择一场会议</p></div>';
+}
+
+// ============ Export/Import ============
+function exportData(){
+  document.getElementById('exportJson').value=JSON.stringify(state,null,2);
+}
+function downloadBackup(){
+  exportData();
+  const blob=new Blob([document.getElementById('exportJson').value],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='会议进度备份_'+todayStr()+'.json';a.click();
+  URL.revokeObjectURL(url);
+  showToast('✅ 备份文件已下载');
+}
+function copyExport(){exportData();const el=document.getElementById('exportJson');el.select();document.execCommand('copy');showToast('✅ 已复制到剪贴板')}
+function importData(){
+  try{
+    const json=document.getElementById('importJson').value.trim();
+    if(!json){alert('请粘贴JSON数据');return}
+    const data=JSON.parse(json);
+    if(!data.meetings||!Array.isArray(data.meetings)){alert('格式不正确');return}
+    if(!confirm(`即将导入 ${data.meetings.length} 场会议、${(data.plannedMeetings||[]).length} 个待开展会议，当前数据将被覆盖。确认？`))return;
+    state=data;
+    if(!state.plannedMeetings)state.plannedMeetings=[];
+    state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.progress)m.progress={};if(!m.status)m.status='筹备中';if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
+    saveState();refreshAll();document.getElementById('progressContent').innerHTML='<div class="empty-state"><div class="icon">📋</div><p>导入完成！请从左侧选择会议</p></div>';
+    showToast('✅ 数据导入成功');
+  }catch(e){alert('JSON解析失败：'+e.message)}
+}
+function importFromFile(event){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    document.getElementById('importJson').value=e.target.result;
+    importData();
+  };
+  reader.readAsText(file);
+  event.target.value='';
+}
+function clearAll(){
+  if(!confirm('确认清空所有数据（会议+待开展）？建议先下载备份。'))return;
+  state={meetings:[],plannedMeetings:[]};saveState();refreshAll();
+  document.getElementById('progressContent').innerHTML='<div class="empty-state"><div class="icon">📋</div><p>数据已清空</p></div>';
+  showToast('数据已清空');
+}
+
+// ============ Migrate old data ============
+function migrateOldData(){
+  const oldKey='meeting_progress_data_v2';
+  if(localStorage.getItem(oldKey)&&!localStorage.getItem(STORAGE_KEY)){
+    try{
+      const oldData=JSON.parse(localStorage.getItem(oldKey));
+      if(oldData&&oldData.meetings){
+        state=oldData;
+        if(!state.plannedMeetings)state.plannedMeetings=[];
+        state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.progress)m.progress={};if(!m.status)m.status='筹备中';if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
+        saveState(true);
+        showToast('🔄 已从旧版迁移数据');
+      }
+    }catch(e){}
+  }
+}
+
+// ============ Init ============
+// Sidebar toggle
+const SIDEBAR_STATE_KEY='sidebar_visible';
+
+function toggleSidebar(){
+  const sidebar=document.querySelector('.sidebar');
+  const expandBtn=document.getElementById('sidebarExpandBtn');
+  const toggleIcon=document.querySelector('.sidebar-toggle');
+  if(sidebar.classList.contains('collapsed')){
+    sidebar.classList.remove('collapsed');
+    expandBtn.classList.remove('show');
+    if(toggleIcon)toggleIcon.textContent='◀';
+    localStorage.setItem(SIDEBAR_STATE_KEY,'visible');
+  }else{
+    sidebar.classList.add('collapsed');
+    expandBtn.classList.add('show');
+    localStorage.setItem(SIDEBAR_STATE_KEY,'collapsed');
+  }
+}
+
+function restoreSidebarState(){
+  const saved=localStorage.getItem(SIDEBAR_STATE_KEY);
+  if(saved==='collapsed'){
+    document.querySelector('.sidebar').classList.add('collapsed');
+    document.getElementById('sidebarExpandBtn').classList.add('show');
+  }
+}
+
+async function init(){
+  await loadState();
+  restoreSidebarState();
+  migrateOldData();
+  if(!state.meetings.length){
+    if(restoreAutoBackup()){
+      showToast('🔄 已从自动备份恢复数据');
+    }
+  }
+  state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.startDate&&m.date){m.startDate=m.date;m.endDate=m.date}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
+  saveState(true);
+  renderMeetingList();
+  renderSummary();
+  renderPlannedMeetings();
+  updatePlannedBadge();
+  updateSyncIndicator('synced');
+
+  // Local backup every 1 minute
+  setInterval(autoBackup,BACKUP_INTERVAL);
+
+  // Data integrity check every 30 seconds
+  setInterval(()=>{
+    try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw){restoreAutoBackup();refreshAll()}}catch(e){}
+  },30000);
+
+  // Save before page closes (real-time backup)
+  window.addEventListener('beforeunload',function(){
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      autoBackup();
+      // Synchronous cloud save attempt (best-effort)
+      if(navigator.sendBeacon){
+        const blob=new Blob([JSON.stringify(state)],{type:'application/json'});
+        navigator.sendBeacon(CLOUD_API.replace('https://jsonblob.com',''),blob);
+      }
+    }catch(e){}
+  });
+
+  // Sync when tab becomes visible again
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && passwordVerified){
+      cloudLoad().then(serverData=>{
+        if(serverData && serverData.meetings){
+          const serverHash=JSON.stringify(serverData);
+          if(_cloudHash && serverHash!==_cloudHash){
+            state=normalizeState(serverData);
+            _cloudHash=serverHash;
+            localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+            refreshAll();
+            showToast('🔄 已从云端同步最新数据');
+          }
+        }
+      });
+    }
+  });
+}
+
+// Don't auto-init - wait for password
+</script>
+</body>
+</html>

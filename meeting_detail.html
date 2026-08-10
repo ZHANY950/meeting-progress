@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>会议执行跟进 · 单场详情</title>
+<style>
+:root{--bg:#f5f5f5;--card:#fff;--text:#2c2c2a;--text2:#5f5e5a;--text3:#888780;--border:#d3d1c7;--green:#1d9e75;--green-bg:#e1f5ee;--blue:#185fa5;--blue-bg:#e6f1fb;--amber:#ba7517;--amber-bg:#faeeda;--red:#a32d2d;--red-bg:#fcebeb;--yellow:#f0c929;--yellow-bg:#fff9e6;--purple:#534ab7;--purple-bg:#eeedfe;--orange:#d85a30;--orange-bg:#faece7;--radius:10px;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
+
+/* Password overlay */
+.pw-overlay{position:fixed;inset:0;background:rgba(255,255,255,.97);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.pw-overlay.hidden{display:none}
+.hidden{display:none!important}
+.pw-box{text-align:center;max-width:380px}
+.pw-box .icon{font-size:48px;margin-bottom:16px}
+.pw-box h2{margin-bottom:4px}
+.pw-box .hint{color:var(--text3);margin-bottom:20px;font-size:13px;line-height:1.6}
+.pw-box input{padding:10px 16px;border:2px solid var(--border);border-radius:8px;font-size:16px;text-align:center;width:160px;font-family:var(--font);letter-spacing:3px}
+.pw-box input:focus{outline:none;border-color:var(--blue)}
+.pw-box .pw-error{color:var(--red);font-size:12px;margin-top:8px;min-height:20px}
+.pw-box .pw-btn{margin-top:12px;padding:10px 32px;border:none;border-radius:8px;background:var(--blue);color:#fff;font-size:14px;cursor:pointer;font-family:var(--font)}
+.pw-box .pw-btn:hover{background:#0c447c}
+
+/* Error state */
+.error-page{text-align:center;padding:80px 20px}
+.error-page .icon{font-size:64px;margin-bottom:16px}
+.error-page h2{color:var(--red);margin-bottom:8px}
+.error-page p{color:var(--text3);font-size:14px}
+
+/* Container */
+.container{max-width:800px;margin:0 auto;padding:24px 20px}
+
+/* Header */
+.header{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}
+.header-info h2{margin-bottom:4px}
+.header-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text2)}
+.header-meta .tag{font-size:11px;padding:2px 8px;border-radius:12px;display:inline-block}
+.tag-offline{background:var(--purple-bg);color:var(--purple)}
+.tag-online{background:var(--blue-bg);color:var(--blue)}
+.tag-status{font-size:11px;padding:2px 8px;border-radius:12px}
+.tag-planning{background:var(--amber-bg);color:var(--amber)}
+.tag-ongoing{background:var(--blue-bg);color:var(--blue)}
+.tag-done{background:var(--green-bg);color:var(--green)}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:13px;font-family:var(--font);transition:all .15s}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-primary:hover{background:#0c447c;color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* Progress bar */
+.progress-bar-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.progress-bar-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.progress-bar-label{font-weight:500}
+.progress-bar-pct{font-size:24px;font-weight:500}
+.progress-bar-track{height:14px;background:#eee;border-radius:7px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:7px;transition:width .3s}
+.pct-high{background:var(--green)}.pct-mid{background:var(--amber)}.pct-low{background:var(--red)}
+
+/* Alert */
+.alert-banner{background:var(--yellow-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px}
+.alert-banner .icon{font-size:16px;flex-shrink:0}
+
+/* Phase sections */
+.phase-section{margin-bottom:16px}
+.phase-title{font-size:13px;font-weight:500;margin-bottom:8px;padding:5px 10px;border-radius:6px;display:inline-block}
+.phase-pre{background:var(--purple-bg);color:var(--purple)}
+.phase-during{background:var(--orange-bg);color:var(--orange)}
+.phase-post{background:var(--amber-bg);color:var(--amber)}
+
+.node-grid{display:grid;gap:5px}
+.node-row{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;position:relative}
+.node-row:hover{border-color:var(--blue)}
+.node-row.done{border-color:var(--green);background:var(--green-bg)}
+.node-row.progress{border-color:var(--amber);background:var(--amber-bg)}
+.node-row.overdue{border-color:var(--yellow);border-width:2px;background:var(--yellow-bg)}
+.node-row.overdue::after{content:'⚠ 逾期';position:absolute;top:-8px;right:8px;background:var(--yellow);color:var(--text);font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.node-row .node-time{font-size:11px;color:var(--text3);min-width:75px;text-align:right;white-space:nowrap}
+.node-row .node-stage{font-weight:500;min-width:110px;font-size:12px}
+.node-row .node-task{flex:1;color:var(--text2);font-size:12px}
+.node-row .node-owner{font-size:11px;color:var(--text3);min-width:80px;text-align:right}
+.node-row .node-deadline{font-size:10px;color:var(--text3);min-width:65px;text-align:right}
+.node-status{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;flex-shrink:0}
+.node-status.done{border-color:var(--green);background:var(--green);color:#fff}
+.node-status.progress{border-color:var(--amber);background:var(--amber);color:#fff}
+
+/* Sync indicator */
+.sync-bar{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-top:16px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+.sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 24px;border-radius:20px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* Empty states */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .icon{font-size:48px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- Password Overlay -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <div class="icon">🔐</div>
+    <h2 id="pwTitle">会议执行跟进</h2>
+    <p class="hint" id="pwHint">请输入会议密码（会议日期MMDD格式，如0712）</p>
+    <input type="text" id="pwInput" placeholder="如: 0712" maxlength="4" onkeydown="if(event.key==='Enter')checkPassword()" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)" autocomplete="off">
+    <div class="pw-error" id="pwError"></div>
+    <button class="pw-btn" onclick="checkPassword()">验证进入</button>
+  </div>
+</div>
+
+<!-- Error Page -->
+<div class="error-page hidden" id="errorPage">
+  <div class="icon">🔗</div>
+  <h2 id="errorTitle">无法加载会议</h2>
+  <p id="errorMsg"></p>
+</div>
+
+<!-- Main Content -->
+<div class="container hidden" id="mainContent">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-row">
+      <div class="header-info">
+        <h2 id="meetingTitle"></h2>
+        <div class="header-meta" id="meetingMeta"></div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="saveAndRefresh()">💾 保存进度</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div id="progressContent"></div>
+
+  <!-- Sync Status -->
+  <div class="sync-bar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncText">数据已同步</span>
+    <span style="margin-left:auto;font-size:10px" id="syncTime"></span>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ SOP Definitions (same as master) ============
+const OFFLINE_SOP = [
+  {id:'pre_1',time:'T-60~T-30天',stage:'会议设计',task:'明确会议目标（主要观念、策略、主题、预算）',owner:'LMM&DM',phase:'pre',deadlineDays:-30},
+  {id:'pre_2',time:'T-60~T-30天',stage:'会议立项',task:'拉群做内外部沟通（人选、讲题、时间、内容）一周内主席定时间、方向；两周内所有嘉宾确定好',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_3',time:'T-60~T-30天',stage:'设定会议总监',task:'统筹会议全流程筹备与执行，把控时间节点、分工落实及问题协调',owner:'会议总监',phase:'pre',deadlineDays:-30},
+  {id:'pre_4',time:'T-14天',stage:'会议出版定型',task:'确认初版日程、串场等细节',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_5',time:'T-14天',stage:'讨论话题共识',task:'与讨论嘉宾提前共识讨论话题，明确讨论方向，确保讨论环节聚焦会议核心，避免偏离主题',owner:'LMM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_6',time:'T-14天',stage:'讲者PPT审核',task:'与讲者过PPT内容，强调需传递的核心信息',owner:'DM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_7',time:'T-14天',stage:'主席沟通流程',task:'确认会议日程细节、串场流程、讨论内容',owner:'LMM&DM',phase:'pre',deadlineDays:-14},
+  {id:'pre_8',time:'T-14天',stage:'分工表确认',task:'设定会议分工表，明确任务与责任',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_9',time:'T-7天',stage:'晚宴沟通（会前/会后）',task:'确认晚宴核心信息：明确晚宴名单（参会嘉宾、核心客户）、晚宴时间、地点、行程安排',owner:'LMM&DM',phase:'pre',deadlineDays:-7},
+  {id:'pre_11',time:'T-2天',stage:'会前沟通会（线上）',task:'确认内部分工落地情况，明确各岗位对接人，明确供应商服务范围及对接细节（如物料制作、现场布置、技术支持等）协调解决前期筹备中的问题，达成全流程共识',owner:'LMM',phase:'pre',deadlineDays:-2},
+  {id:'pre_12',time:'T-7~T-1天',stage:'参会嘉宾沟通',task:'会前一周每天统计参会嘉宾以及任务嘉宾出席情况（会前7-3-1天提醒客户参会）',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_13',time:'T-1天',stage:'会前最终确认',task:'嘉宾出行交通、用餐名单、会议最终出席人员',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_14',time:'T-1天',stage:'会前彩排',task:'设备调试、物料摆放、会议流程彩排等',owner:'会议总监&LMM&供应商',phase:'pre',deadlineDays:-1},
+  {id:'during_1',time:'D-DAY',stage:'坚守岗位，各司其职',task:'做好会议记录与总结（三点核心传递信息）；讨论嘉宾发言做记录；MICS坚守任务；确保客户全程参会',owner:'ALL',phase:'during',deadlineDays:0},
+  {id:'post_1',time:'T+3天',stage:'会后复盘（线上）',task:'全员线上复盘，设定会后TTH目标及行动计划，传递三点核心信息',owner:'DM',phase:'post',deadlineDays:3},
+  {id:'post_2',time:'T+7天',stage:'持续跟进',task:'跟进会后四周TTH进展',owner:'LMM',phase:'post',deadlineDays:7}
+];
+
+const ONLINE_SOP = [
+  {id:'pre_1',time:'T-60~T-30天',stage:'会议设计',task:'明确会议目标（主要观念、策略、主题、预算）',owner:'LMM&DM',phase:'pre',deadlineDays:-30},
+  {id:'pre_2',time:'T-60~T-30天',stage:'会议立项',task:'拉群做内外部沟通（人选、讲题、时间、内容）一周内主席定时间、方向；两周内所有嘉宾确定好',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_3',time:'T-60~T-30天',stage:'设定会议总监',task:'统筹会议全流程筹备与执行，把控时间节点、分工落实及问题协调',owner:'LMM',phase:'pre',deadlineDays:-30},
+  {id:'pre_4',time:'T-14天',stage:'会议出版定型',task:'确认初版日程、串场等细节',owner:'会议总监',phase:'pre',deadlineDays:-14},
+  {id:'pre_5',time:'T-14天',stage:'讨论话题共识',task:'与讨论嘉宾提前共识讨论话题，明确讨论方向，确保讨论环节聚焦会议核心，避免偏离主题',owner:'LMM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_6',time:'T-14天',stage:'讲者PPT审核',task:'与讲者过PPT内容，强调需传递的核心信息',owner:'DM&MICS',phase:'pre',deadlineDays:-14},
+  {id:'pre_7',time:'T-14天',stage:'主席沟通流程',task:'确认会议日程细节、串场流程、讨论内容',owner:'LMM&DM',phase:'pre',deadlineDays:-14},
+  {id:'pre_10',time:'T-2天',stage:'会前沟通会（线上）',task:'确认内部分工落地情况，明确各岗位对接人，明确供应商服务范围及对接细节（如物料制作、现场布置、技术支持等）协调解决前期筹备中的问题，达成全流程共识',owner:'LMM',phase:'pre',deadlineDays:-2},
+  {id:'pre_11',time:'T-7~T-1天',stage:'参会嘉宾沟通',task:'会前一周每天统计参会嘉宾以及任务嘉宾出席情况（会前7-3-1天提醒客户参会）',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'pre_12',time:'T-1天',stage:'会前最终确认',task:'嘉宾出行交通、用餐名单、会议最终出席人员',owner:'会议总监',phase:'pre',deadlineDays:-1},
+  {id:'during_1',time:'D-DAY',stage:'会前彩排',task:'任务嘉宾会前上线测试网络、视频、声音、ppt播放',owner:'会议总监',phase:'during',deadlineDays:0},
+  {id:'during_2',time:'D-DAY',stage:'坚守岗位，各司其职',task:'做好会议记录与总结（三点核心传递信息）；讨论嘉宾发言做记录；MICS坚守任务；确保客户全程参会',owner:'ALL',phase:'during',deadlineDays:0},
+  {id:'post_1',time:'T+3天',stage:'会后复盘',task:'全员复盘，设定会后TTH目标及行动计划，传递三点核心信息',owner:'DM',phase:'post',deadlineDays:3},
+  {id:'post_2',time:'T+7天',stage:'持续跟进',task:'跟进会后四周TTH进展',owner:'LMM',phase:'post',deadlineDays:7}
+];
+
+// ============ State ============
+const STORAGE_KEY = 'meeting_progress_data_v3';
+const OLD_STORAGE_KEY = 'meeting_progress_data_v2';
+let meetingUID = null;
+let meetingIndex = -1;
+let meeting = null;
+let passwordVerified = false;
+let lastSaveTime = null;
+
+// ============ Cloud Sync (jsonblob.com) ============
+const CLOUD_BLOB_ID = '019fe921-14fa-716a-92c8-327fb39b2d0d';
+const CLOUD_API = 'https://jsonblob.com/api/jsonBlob/' + CLOUD_BLOB_ID;
+let _cloudHash = '';
+let _cloudSaveTimer = null;
+let _cloudSyncing = false;
+let _cloudETag = null;
+
+async function cloudLoad(){
+  try{
+    const headers = {'Accept':'application/json'};
+    if(_cloudETag) headers['If-None-Match'] = _cloudETag;
+    const res = await fetch(CLOUD_API, {headers});
+    if(res.status === 304) return null;
+    if(!res.ok) return null;
+    const etag = res.headers.get('ETag');
+    if(etag) _cloudETag = etag;
+    return await res.json();
+  }catch(e){ return null; }
+}
+
+async function cloudSaveFull(stateData){
+  try{
+    const res = await fetch(CLOUD_API,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(stateData)
+    });
+    if(res.status === 429){
+      console.warn('Cloud rate limited, will retry...');
+      clearTimeout(_cloudSaveTimer);
+      _cloudSaveTimer = setTimeout(()=>{ cloudSaveFull(stateData); }, 62000);
+      return;
+    }
+    const etag = res.headers.get('ETag');
+    if(etag) _cloudETag = etag;
+    _cloudHash = JSON.stringify(stateData);
+  }catch(e){ console.error('Cloud save failed:',e); }
+}
+
+function debouncedCloudSave(stateData){
+  clearTimeout(_cloudSaveTimer);
+  _cloudSaveTimer = setTimeout(()=>{ cloudSaveFull(stateData); }, 2000);
+}
+
+// ============ Helpers ============
+function getSOP(type){return type==='线上'?ONLINE_SOP:OFFLINE_SOP}
+function es(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fmtDate(d){if(!d)return'';const p=d.split('-');return p[1]+'/'+p[2]}
+function fmtDateMMDD(d){if(!d)return'0000';const p=d.split('-');return p[1]+p[2]}
+function todayDate(){const t=new Date();t.setHours(0,0,0,0);return t}
+function parseDate(s){if(!s)return null;const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function nodeDeadline(mtg,node){const md=parseDate(mtg.startDate||mtg.date);if(!md)return null;const d=new Date(md);d.setDate(d.getDate()+(node.deadlineDays||0));return d}
+function isNodeOverdue(mtg,node){if(!mtg.startDate&&!mtg.date)return false;const dl=nodeDeadline(mtg,node);if(!dl)return false;const st=(mtg.progress&&mtg.progress[node.id])||'pending';return todayDate()>dl&&st!=='done'}
+function countOverdue(mtg){const sop=getSOP(mtg.type);return sop.filter(n=>isNodeOverdue(mtg,n)).length}
+function getProgress(mtg){const sop=getSOP(mtg.type);let done=0;sop.forEach(n=>{if(mtg.progress&&mtg.progress[n.id]==='done')done++});return {done,total:sop.length,pct:sop.length>0?Math.round(done/sop.length*100):0}}
+function pctClass(pct){return pct>=80?'pct-high':pct>=50?'pct-mid':'pct-low'}
+
+// ============ Password ============
+function checkPassword(){
+  if(!meetingUID){
+    // No meeting loaded yet - load first then check
+    loadMeetingFromHash();
+    return;
+  }
+  if(!meeting){
+    document.getElementById('pwError').textContent='会议数据加载失败，请检查链接';
+    return;
+  }
+  const input=document.getElementById('pwInput').value.trim();
+  const expectedPassword=fmtDateMMDD(meeting.startDate||meeting.date);
+  if(!input){document.getElementById('pwError').textContent='请输入密码';return}
+  if(input!==expectedPassword){
+    document.getElementById('pwError').textContent='密码错误（提示：会议日期的月日，如0712）';
+    document.getElementById('pwInput').value='';
+    document.getElementById('pwInput').focus();
+    return;
+  }
+  passwordVerified=true;
+  document.getElementById('pwOverlay').classList.add('hidden');
+  document.getElementById('mainContent').classList.remove('hidden');
+  document.getElementById('pwError').textContent='';
+  loadStateAndRender();
+}
+
+// ============ Load Meeting ============
+async function loadMeetingFromHash(){
+  const hash=window.location.hash;
+  if(!hash||hash==='#'){
+    showError('缺少会议链接', '请在链接末尾添加 #会议ID，例如: meeting_detail.html#m_1234567890_abc123');
+    document.getElementById('pwOverlay').classList.add('hidden');
+    document.getElementById('pwTitle').textContent='链接无效';
+    document.getElementById('pwHint').textContent='请使用总看板「📋 单场链接」按钮生成的正确链接';
+    return;
+  }
+  meetingUID=hash.replace('#','');
+  document.title='会议执行跟进 · '+meetingUID;
+
+  // Try server first, fall back to localStorage
+  let stateData=null;
+  const serverData = await cloudLoad();
+  if(serverData && serverData.meetings){
+    stateData = serverData;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateData));
+  } else {
+    try{
+      let raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)raw=localStorage.getItem(OLD_STORAGE_KEY);
+      if(raw) stateData=JSON.parse(raw);
+    }catch(e){}
+  }
+  if(!stateData||!stateData.meetings||!Array.isArray(stateData.meetings)){
+    showError('无会议数据','服务器和本地均无数据。请先在总看板中创建会议。');return;
+  }
+
+  meetingIndex=stateData.meetings.findIndex(m=>m.uid===meetingUID);
+  if(meetingIndex<0){showError('会议不存在','该会议可能已被删除。UID: '+meetingUID);return}
+  meeting=stateData.meetings[meetingIndex];
+  if(!meeting.progress)meeting.progress={};
+  if(!meeting.status)meeting.status='筹备中';
+
+  // Update password hint
+  document.getElementById('pwTitle').textContent=es(meeting.name);
+  document.getElementById('pwHint').textContent='会议日期: '+(meeting.startDate||meeting.date)+' | 请输入密码（月日4位数字）';
+  document.getElementById('pwInput').placeholder=fmtDateMMDD(meeting.startDate||meeting.date);
+}
+
+function showError(title,msg){
+  document.getElementById('pwOverlay').classList.add('hidden');
+  document.getElementById('errorPage').classList.remove('hidden');
+  document.getElementById('errorTitle').textContent=title;
+  document.getElementById('errorMsg').textContent=msg;
+}
+
+// ============ State Management ============
+async function loadStateAndRender(){
+  // Try server first, fall back to localStorage
+  let stateData=null;
+  const serverData = await cloudLoad();
+  if(serverData && serverData.meetings){
+    stateData = serverData;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateData));
+  } else {
+    try{
+      let raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)raw=localStorage.getItem(OLD_STORAGE_KEY);
+      if(raw) stateData=JSON.parse(raw);
+    }catch(e){}
+  }
+  if(!stateData||!stateData.meetings)return;
+  const idx=stateData.meetings.findIndex(m=>m.uid===meetingUID);
+  if(idx<0){showError('会议已删除','该会议在总看板中被删除。');return}
+  meeting=stateData.meetings[idx];
+  meetingIndex=idx;
+  _cloudHash = JSON.stringify(stateData);
+  renderProgress();
+  updateSyncStatus();
+}
+
+async function saveProgress(){
+  // Read full state from server/localStorage, update this meeting, write back
+  let stateData=null;
+  const serverData = await cloudLoad();
+  if(serverData && serverData.meetings){
+    stateData = serverData;
+  } else {
+    try{
+      let raw=localStorage.getItem(STORAGE_KEY);
+      if(!raw)raw=localStorage.getItem(OLD_STORAGE_KEY);
+      if(raw) stateData=JSON.parse(raw);
+    }catch(e){ return false; }
+  }
+  if(!stateData||!stateData.meetings)return false;
+  const idx=stateData.meetings.findIndex(m=>m.uid===meetingUID);
+  if(idx<0)return false;
+  stateData.meetings[idx]=meeting;
+  stateData.meetings[idx]._active=stateData.meetings[idx]._active||false;
+  // Write to localStorage and cloud
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(stateData));
+  _cloudHash = JSON.stringify(stateData);
+  debouncedCloudSave(stateData);
+  lastSaveTime=new Date();
+  return true;
+}
+
+async function saveAndRefresh(){
+  if(!meeting)return;
+  const ok=await saveProgress();
+  if(ok){
+    updateSyncStatus();
+    showToast('✅ 进度已保存并同步到总看板');
+  }else{
+    showToast('❌ 保存失败，请刷新页面重试');
+  }
+}
+
+// ============ Render ============
+function renderProgress(){
+  if(!meeting){return}
+  const sop=getSOP(meeting.type);
+  const p=getProgress(meeting);
+  const overdueCount=countOverdue(meeting);
+
+  // Header
+  const typeTag=meeting.type==='线下'?'tag-offline':'tag-online';
+  const statusTag=meeting.status==='已完成'?'tag-done':meeting.status==='进行中'?'tag-ongoing':'tag-planning';
+  document.getElementById('meetingTitle').textContent=meeting.name;
+  document.getElementById('meetingMeta').innerHTML=`
+    <span class="tag ${typeTag}">${meeting.type}会议</span>
+    <span>${meeting.dm||'未分配'}</span>
+    <span>${meeting.city||''}</span>
+    <span>📅 ${(meeting.startDate||meeting.date)||''}${(meeting.endDate&&meeting.endDate!==(meeting.startDate||meeting.date))?(' ~ '+meeting.endDate):''}</span>
+    <span>👤 总监: ${meeting.director||'未指定'}</span>
+    <span class="tag tag-status ${statusTag}">${meeting.status}</span>
+  `;
+
+  let html='';
+  if(overdueCount>0){
+    html+=`<div class="alert-banner"><span class="icon">⚠️</span>该会议有 <strong style="color:var(--amber)">${overdueCount}</strong> 个节点已逾期，请尽快处理！</div>`;
+  }
+
+  html+=`<div class="progress-bar-wrap">
+    <div class="progress-bar-header">
+      <span class="progress-bar-label">SOP执行总进度</span>
+      <span class="progress-bar-pct" style="color:var(--${p.pct>=80?'green':p.pct>=50?'amber':'red'})">${p.pct}%</span>
+    </div>
+    <div class="progress-bar-track"><div class="progress-bar-fill ${pctClass(p.pct)}" style="width:${p.pct}%"></div></div>
+    <div style="margin-top:8px;font-size:12px;color:var(--text3)">
+      已完成 <strong>${p.done}</strong>/${p.total} 个节点
+      ${overdueCount>0?` | <span style="color:var(--amber);font-weight:500">⚠ 逾期 ${overdueCount} 项</span>`:''}
+    </div>
+  </div>`;
+
+  const phases=[
+    {key:'pre',title:'会前筹备',cls:'phase-pre',nodes:sop.filter(n=>n.phase==='pre')},
+    {key:'during',title:'会中执行',cls:'phase-during',nodes:sop.filter(n=>n.phase==='during')},
+    {key:'post',title:'会后跟进',cls:'phase-post',nodes:sop.filter(n=>n.phase==='post')}
+  ];
+  let phaseDone={};
+  phases.forEach(ph=>{phaseDone[ph.key]=ph.nodes.filter(n=>meeting.progress&&meeting.progress[n.id]==='done').length});
+
+  phases.forEach(ph=>{
+    if(!ph.nodes.length)return;
+    html+=`<div class="phase-section"><span class="phase-title ${ph.cls}">${ph.title} (${phaseDone[ph.key]}/${ph.nodes.length})</span><div class="node-grid">`;
+    ph.nodes.forEach(n=>{
+      const st=(meeting.progress&&meeting.progress[n.id])||'pending';
+      const overdue=isNodeOverdue(meeting,n);
+      let rowCls='',statusCls='',statusIcon='○';
+      if(st==='done'){rowCls='done';statusCls='done';statusIcon='✓'}
+      else if(st==='progress'){rowCls='progress';statusCls='progress';statusIcon='◉'}
+      if(overdue&&!rowCls)rowCls='overdue';
+      const dl=nodeDeadline(meeting,n);
+      const dlStr=dl?`${dl.getMonth()+1}/${dl.getDate()}`:'-';
+      html+=`<div class="node-row ${rowCls}" onclick="toggleNode('${n.id}')" title="点击切换状态：未开始→进行中→已完成→未开始">
+        <div class="node-status ${statusCls}">${statusIcon}</div>
+        <span class="node-time">${n.time}</span>
+        <span class="node-stage">${n.stage}</span>
+        <span class="node-task">${n.task}</span>
+        <span class="node-owner">${n.owner}</span>
+        <span class="node-deadline">截止: ${dlStr}</span>
+      </div>`;
+    });
+    html+='</div></div>';
+  });
+
+  document.getElementById('progressContent').innerHTML=html;
+}
+
+function toggleNode(nodeId){
+  if(!meeting)return;
+  if(!meeting.progress)meeting.progress={};
+  const cur=meeting.progress[nodeId]||'pending';
+  meeting.progress[nodeId]=cur==='pending'?'progress':cur==='progress'?'done':'pending';
+  // Auto-save (async, fire and forget)
+  saveProgress().then(ok=>{
+    if(ok)showToast('✅ 状态已更新');
+  });
+  renderProgress();
+  updateSyncStatus();
+}
+
+// ============ Sync Status ============
+function updateSyncStatus(){
+  const dot=document.getElementById('syncDot');
+  const text=document.getElementById('syncText');
+  const time=document.getElementById('syncTime');
+
+  // Check if data in localStorage matches our current state
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const stateData=JSON.parse(raw);
+      const idx=stateData.meetings.findIndex(m=>m.uid===meetingUID);
+      if(idx>=0){
+        const storedProgress=JSON.stringify(stateData.meetings[idx].progress||{});
+        const localProgress=JSON.stringify(meeting.progress||{});
+        if(storedProgress===localProgress){
+          dot.className='sync-dot';
+          text.textContent='☁️ 云端已同步';
+        }else{
+          dot.className='sync-dot syncing';
+          text.textContent='有未保存的更改';
+        }
+      }
+    }
+  }catch(e){}
+  const now=new Date();
+  time.textContent=lastSaveTime?'上次保存: '+lastSaveTime.toLocaleTimeString():'';
+}
+
+// ============ Cloud Polling ============
+window.addEventListener('storage',function(e){
+  if((e.key===STORAGE_KEY||e.key===OLD_STORAGE_KEY)&&e.newValue){
+    try{
+      const newState=JSON.parse(e.newValue);
+      if(newState&&newState.meetings){
+        const idx=newState.meetings.findIndex(m=>m.uid===meetingUID);
+        if(idx>=0){
+          meeting=newState.meetings[idx];
+          meetingIndex=idx;
+          if(!meeting.progress)meeting.progress={};
+          _cloudHash=JSON.stringify(newState);
+          renderProgress();
+          updateSyncStatus();
+        }else{
+          showError('会议已删除','该会议在总看板中被删除。请关闭此页面。');
+        }
+      }
+    }catch(e){}
+  }
+});
+
+// Server polling for cross-device sync
+setInterval(async ()=>{
+  if(_cloudSyncing || !passwordVerified || !meeting) return;
+  const serverData = await cloudLoad();
+  if(!serverData || !serverData.meetings) return;
+  const serverHash = JSON.stringify(serverData);
+  if(_cloudHash && serverHash !== _cloudHash){
+    _cloudSyncing = true;
+    const idx=serverData.meetings.findIndex(m=>m.uid===meetingUID);
+    if(idx>=0){
+      meeting=serverData.meetings[idx];
+      meetingIndex=idx;
+      if(!meeting.progress)meeting.progress={};
+      _cloudHash=serverHash;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serverData));
+      renderProgress();
+      updateSyncStatus();
+    }
+    _cloudSyncing = false;
+  } else if(!_cloudHash){
+    _cloudHash = serverHash;
+  }
+}, 15000);
+
+// ============ Toast ============
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._tid);t._tid=setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ============ Init ============
+(async function init(){
+  await loadMeetingFromHash();
+  // Periodic sync check (server polling handles 15s, this is a 10s backup)
+  setInterval(()=>{if(passwordVerified&&meeting){loadStateAndRender()}},10000);
+  // Save before page closes
+  window.addEventListener('beforeunload',function(){
+    if(meeting && passwordVerified){
+      try{ saveProgress(); }catch(e){}
+    }
+  });
+  // Sync when tab becomes visible
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden && passwordVerified && meeting){
+      loadStateAndRender();
+    }
+  });
+})();
+</script>
+</body>
+</html>
