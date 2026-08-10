@@ -14,16 +14,15 @@ a{color:#60a5fa}
 <body>
 <div>
 <h2>正在跳转...</h2>
-<p>如未自动跳转请点<a id="fallback" href="#">这里</a></p>
+<p>如未自动跳转请点<a id="fb" href="#">这里</a></p>
 </div>
 <script>
-// 永久跳转入口 — 存放于 GitHub Pages (https://zhany950.github.io/meeting-progress/go.html)
-// 每次 CloudStudio 重新部署后，主看板自动将新域名写入 jsonblob meta.currentUrl
-// 此页面读取 jsonblob → 跳转到最新部署链接
-const FALLBACK = 'https://dc1e62d9e4584f4f8b0bff3e87f593c3.bj10.agentos-app.net';
+// 永久跳转入口 — 存放于 GitHub Pages
+// 优先使用 GitHub Pages（微信可访问），jsonblob 作为动态更新源
+const GH = 'https://zhany950.github.io/meeting-progress/';
 const API = 'https://jsonblob.com/api/jsonBlob/019fe921-14fa-716a-92c8-327fb39b2d0d';
 
-document.getElementById('fallback').href = FALLBACK;
+document.getElementById('fb').href = GH;
 
 (async function(){
   try{
@@ -31,13 +30,14 @@ document.getElementById('fallback').href = FALLBACK;
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
     const url = (data && data.meta && data.meta.currentUrl) || '';
-    if(url && !url.startsWith('file://') && url.startsWith('http')){
+    // 仅当云端URL是http/https且不是agentos-app.net(微信封禁)时才使用
+    if(url && url.startsWith('http') && !url.includes('agentos-app.net')){
       window.location.replace(url);
       return;
     }
   } catch(e) {}
-  // 云端不可达 → 使用硬编码回退
-  window.location.replace(FALLBACK);
+  // 兜底：直接跳 GitHub Pages（微信可访问、永久不变）
+  window.location.replace(GH);
 })();
 </script>
 </body>
