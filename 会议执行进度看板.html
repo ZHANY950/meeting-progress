@@ -583,8 +583,14 @@ async function loadState(){
 }
 
 // Write current deployment URL to cloud meta, for stale link detection
+// GitHub Pages is the stable, weixin-accessible entry; never overwrite with agentos-app.net
+const STABLE_URL = 'https://zhany950.github.io/meeting-progress/';
 async function updateCurrentUrl(){
-  const currentUrl = window.location.origin;
+  let currentUrl = window.location.origin;
+  // Skip agentos-app.net domains (blocked by WeChat browser, ephemeral CloudStudio instances)
+  if(currentUrl.includes('agentos-app.net')){
+    currentUrl = STABLE_URL;
+  }
   if(!state.meta || state.meta.currentUrl === currentUrl) return;
   state.meta.currentUrl = currentUrl;
   // Save to local first, then push to cloud

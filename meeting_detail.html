@@ -562,7 +562,9 @@ async function checkStaleLink(){
   const currentOrigin = window.location.origin;
   const serverData = await cloudLoad();
   if(!serverData || !serverData.meta || !serverData.meta.currentUrl) return;
-  const latestUrl = serverData.meta.currentUrl;
+  let latestUrl = serverData.meta.currentUrl;
+  // Skip agentos-app.net (ephemeral, blocked by WeChat) — GitHub Pages is the real stable entry
+  if(latestUrl.includes('agentos-app.net')) return;
   if(latestUrl && currentOrigin !== new URL(latestUrl).origin){
     // Show stale link banner
     const newDetailUrl = latestUrl + '/meeting_detail.html#' + meetingUID;
