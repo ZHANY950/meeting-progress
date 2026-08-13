@@ -1,0 +1,410 @@
+{
+  "meetings": [
+    {
+      "name": "痛晕双解",
+      "date": "2026-08-13",
+      "type": "线上",
+      "dm": "李路",
+      "city": "",
+      "director": "白云松",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_1": "done",
+        "pre_2": "done",
+        "pre_3": "done",
+        "pre_4": "done",
+        "pre_5": "pending",
+        "pre_7": "done",
+        "pre_6": "done",
+        "pre_10": "pending"
+      },
+      "_active": false,
+      "uid": "m_1786289940612_xjo6gi",
+      "startDate": "2026-08-13",
+      "endDate": "2026-08-13"
+    },
+    {
+      "name": "偏头痛规范化诊疗学术会议——扬州站",
+      "date": "2026-08-16",
+      "type": "线下",
+      "dm": "郑家成",
+      "city": "扬州",
+      "director": "高佳怡",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_1": "done",
+        "pre_2": "done",
+        "pre_3": "done",
+        "pre_4": "done",
+        "pre_9": "done",
+        "pre_8": "done",
+        "pre_5": "done",
+        "pre_6": "done",
+        "pre_7": "done"
+      },
+      "uid": "m_1786290492673_ufpuqn",
+      "_active": false,
+      "startDate": "2026-08-16",
+      "endDate": "2026-08-16"
+    },
+    {
+      "name": "名院有约",
+      "date": "2026-08-17",
+      "type": "线上",
+      "dm": "孟鈃",
+      "city": "",
+      "director": "罗世懿",
+      "status": "进行中",
+      "notes": "鼓楼+天坛",
+      "progress": {
+        "pre_1": "done",
+        "pre_2": "done",
+        "pre_3": "done",
+        "pre_4": "done",
+        "pre_5": "done",
+        "pre_6": "done",
+        "pre_7": "done"
+      },
+      "uid": "m_1786290617957_du8sbw",
+      "_active": false,
+      "startDate": "2026-08-17",
+      "endDate": "2026-08-17"
+    },
+    {
+      "name": "TTT南京站",
+      "date": "2026-08-29",
+      "type": "线下",
+      "dm": "孟鈃",
+      "city": "南京",
+      "director": "李雪茹",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_1": "done",
+        "pre_2": "done",
+        "pre_3": "done",
+        "pre_4": "pending"
+      },
+      "uid": "m_1786291006495_v0sbtu",
+      "_active": false,
+      "startDate": "2026-08-29",
+      "endDate": "2026-08-29"
+    },
+    {
+      "name": "南通眩晕会议",
+      "date": "2026-09-13",
+      "type": "线下",
+      "dm": "何方禹",
+      "city": "南通",
+      "director": "周丽丽",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_1": "done"
+      },
+      "_active": false,
+      "uid": "m_1786291056621_y3p277",
+      "startDate": "2026-09-13",
+      "endDate": "2026-09-13"
+    },
+    {
+      "name": "聚力新安 · 聚力头疾安徽省头痛眩晕学科高质量发展研讨会",
+      "date": "2026-09-05",
+      "type": "线下",
+      "dm": "卜先峰",
+      "city": "合肥",
+      "director": "杨胜运",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_3": "done",
+        "pre_1": "done"
+      },
+      "_active": false,
+      "uid": "m_1786291266153_5mqa3j",
+      "startDate": "2026-09-05",
+      "endDate": "2026-09-05"
+    },
+    {
+      "name": "第十届金陵医学会议",
+      "date": "2026-09-04",
+      "type": "线下",
+      "dm": "郑家成",
+      "city": "南京",
+      "director": "徐燕",
+      "status": "进行中",
+      "notes": "",
+      "progress": {
+        "pre_1": "done",
+        "pre_2": "done",
+        "pre_3": "done"
+      },
+      "uid": "m_1786291394235_vktxk8",
+      "_active": false,
+      "startDate": "2026-09-04",
+      "endDate": "2026-09-04"
+    },
+    {
+      "name": "健科会年会",
+      "startDate": "2026-09-04",
+      "endDate": "2026-09-06",
+      "date": "2026-09-04",
+      "type": "外部会议",
+      "dm": "",
+      "city": "长沙",
+      "director": "",
+      "status": "进行中",
+      "notes": "",
+      "progress": {},
+      "extData": {
+        "quota": 12,
+        "invited": 0,
+        "inviteDeadline": "2026-08-21",
+        "replaceDeadline": "",
+        "travelDeadline": "",
+        "dmQuota": {
+          "何方禹": 3,
+          "孟鈃": 2,
+          "郑家成": 1,
+          "李路": 2,
+          "张鑫": 2,
+          "卜先峰": 1,
+          "待分配": 1
+        },
+        "dmInvited": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        }
+      },
+      "_active": false,
+      "uid": "m_1786293752429_5otu9o"
+    },
+    {
+      "name": "NHC全国启动会",
+      "startDate": "2026-09-19",
+      "endDate": "2026-09-19",
+      "date": "2026-09-19",
+      "type": "外部会议",
+      "dm": "",
+      "city": "北京",
+      "director": "",
+      "status": "筹备中",
+      "notes": "",
+      "progress": {},
+      "extData": {
+        "dmQuota": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        },
+        "dmInvited": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        },
+        "quota": 0,
+        "invited": 0,
+        "inviteDeadline": "",
+        "replaceDeadline": "",
+        "travelDeadline": ""
+      },
+      "uid": "m_1786294474572_4mp5es",
+      "_active": false
+    },
+    {
+      "name": "巴拉尼年会",
+      "startDate": "2026-10-15",
+      "endDate": "2026-10-18",
+      "date": "2026-10-15",
+      "type": "外部会议",
+      "dm": "",
+      "city": "上海",
+      "director": "",
+      "status": "筹备中",
+      "notes": "",
+      "progress": {},
+      "extData": {
+        "dmQuota": {
+          "何方禹": 3,
+          "孟鈃": 2,
+          "郑家成": 2,
+          "李路": 3,
+          "张鑫": 2,
+          "卜先峰": 1,
+          "待分配": 0
+        },
+        "dmInvited": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        },
+        "quota": 13,
+        "invited": 0,
+        "inviteDeadline": "",
+        "replaceDeadline": "",
+        "travelDeadline": ""
+      },
+      "uid": "m_1786294551188_p5qquz",
+      "_active": false
+    },
+    {
+      "name": "北京共建大会",
+      "startDate": "2026-10-17",
+      "endDate": "2026-10-17",
+      "date": "2026-10-17",
+      "type": "外部会议",
+      "dm": "",
+      "city": "北京",
+      "director": "",
+      "status": "筹备中",
+      "notes": "",
+      "progress": {},
+      "extData": {
+        "dmQuota": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        },
+        "dmInvited": {
+          "何方禹": 0,
+          "孟鈃": 0,
+          "郑家成": 0,
+          "李路": 0,
+          "张鑫": 0,
+          "卜先峰": 0,
+          "待分配": 0
+        },
+        "quota": 0,
+        "invited": 0,
+        "inviteDeadline": "",
+        "replaceDeadline": "",
+        "travelDeadline": ""
+      },
+      "uid": "m_1786294597354_a9lf3l",
+      "_active": false
+    },
+    {
+      "name": "NHC线下会",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-01",
+      "date": "2026-11-01",
+      "type": "线下",
+      "dm": "",
+      "city": "南京",
+      "director": "",
+      "status": "筹备中",
+      "notes": "",
+      "progress": {},
+      "uid": "m_1786367295245_3siyyy",
+      "_active": true
+    }
+  ],
+  "plannedMeetings": [
+    {
+      "name": "痛晕双解",
+      "totalSessions": 3,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "头痛头晕交流会：2主席2讲者2病例3讨论 主办方：北京鼎医公益基金会",
+      "id": "pm_1786288720850_m6m7e8"
+    },
+    {
+      "name": "治痛道合",
+      "totalSessions": 8,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "偏头痛全病程管理交流会：1主席2讲者2病例3讨论；主办方：北京中卫医药卫生科技发展中心",
+      "id": "pm_1786289164972_f98tmb"
+    },
+    {
+      "name": "头痛新视界",
+      "totalSessions": 5,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "BD会议：2主席2讲者2病例3讨论。主办方：北京中卫医药卫生科技发展中心",
+      "id": "pm_1786289260888_tu9sr1"
+    },
+    {
+      "name": "徽医论痛",
+      "totalSessions": 4,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "头痛头晕规范化诊疗，安徽专项；2主席2讲者2病例4讨论。主办方：北京中西医慢病防治促进会",
+      "id": "pm_1786289385824_segbyd"
+    },
+    {
+      "name": "2026疼痛精粹云端谈",
+      "totalSessions": 2,
+      "form": "线上",
+      "source": "总部下达",
+      "note": "疼痛科系列会：2主席2讲者2病例；主办方：北京中西医慢病防治促进会",
+      "id": "pm_1786289485679_z6sm1j"
+    },
+    {
+      "name": "名院有约",
+      "totalSessions": 2,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "TOP医院连线：2主席2讲者1专题1病例；主办方：中国医学论坛报社",
+      "id": "pm_1786289572068_70ng4o"
+    },
+    {
+      "name": "头痛领航——线上",
+      "totalSessions": 1,
+      "form": "线上",
+      "source": "总部下达",
+      "note": "中央市场部 新A破冰；2主席2讲者1病例3讨论；主办方：北京中卫医药卫生科技发展中心",
+      "id": "pm_1786289688521_28g994"
+    },
+    {
+      "name": "头痛领航——线下",
+      "totalSessions": 1,
+      "form": "线下",
+      "source": "总部下达",
+      "note": "中央市场部 老A深挖；2主席3主持3讲者1专题2病例6讨论，预算8w；主办方：北京中卫医药卫生科技发展中心",
+      "id": "pm_1786289778739_i66qoe"
+    },
+    {
+      "name": "CGRP论坛",
+      "totalSessions": 3,
+      "form": "线上",
+      "source": "区域规划",
+      "note": "区域市场 聚焦病例分享 1主席 3病例  1个半小时",
+      "id": "pm_1786289821866_5sz2zd"
+    },
+    {
+      "name": "治痛梦工坊",
+      "totalSessions": 1,
+      "form": "线下",
+      "source": "区域规划",
+      "note": "区域市场 模拟问诊+分组讨论 预算8w",
+      "id": "pm_1786289855761_of3hj0"
+    }
+  ],
+  "meta": {
+    "currentUrl": "https://zhany950.github.io/meeting-progress/"
+  }
+}
