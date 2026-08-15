@@ -18,17 +18,18 @@ a{color:#60a5fa}
 </div>
 <script>
 // 永久跳转入口 — 存放于 GitHub Pages
-// 优先使用 GitHub Pages（微信可访问），jsonblob 作为动态更新源
+// 优先使用 GitHub Pages（微信可访问），jsoneditoronline 作为动态更新源
 const GH = 'https://zhany950.github.io/meeting-progress/';
-const API = 'https://jsonblob.com/api/jsonBlob/019fe921-14fa-716a-92c8-327fb39b2d0d';
+const API = 'https://api.jsoneditoronline.org/v1/docs/11754059ad99453e903bbdb2689b5109';
 
 document.getElementById('fb').href = GH;
 
 (async function(){
   try{
-    const res = await fetch(API, {headers:{'Accept':'application/json'}});
+    const res = await fetch(API, {cache:'no-store'});
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
+    const j = await res.json();
+    const data = j && j.data ? JSON.parse(j.data) : null;
     const url = (data && data.meta && data.meta.currentUrl) || '';
     // 仅当云端URL是http/https且不是agentos-app.net(微信封禁)时才使用
     if(url && url.startsWith('http') && !url.includes('agentos-app.net')){
