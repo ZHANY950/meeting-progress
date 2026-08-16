@@ -475,6 +475,7 @@ let _cloudSyncing = false;
 let _lastCloudSaveTime = null;
 let _cloudSaveRetries = 0;
 let _cloudSavePending = false;
+let _localDirty = false; // 本地有未推送云端的修改时为true，防止轮询用旧云端数据覆盖
 
 function updateSyncIndicator(status, timeStr){
   const dot=document.getElementById('syncDotSync');
@@ -500,7 +501,12 @@ async function cloudLoad(){
 }
 
 async function cloudSave(data){
-  if(_cloudSavePending) return;
+  if(_cloudSavePending){
+    // 上一次PUT仍在飞行中: 不丢弃新数据，3秒后用最新state重推
+    clearTimeout(_cloudSaveTimer);
+    _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, 3000);
+    return;
+  }
   _cloudSavePending = true;
   updateSyncIndicator('syncing');
   try{
@@ -526,6 +532,7 @@ async function cloudSave(data){
     _cloudHash = JSON.stringify(data);
     _lastCloudSaveTime = new Date();
     _cloudSaveRetries = 0;
+    _localDirty = false; // 云端推送成功，清除脏标记
     updateSyncIndicator('synced');
   }catch(e){
     console.error('Cloud save failed:',e);
@@ -615,6 +622,7 @@ async function updateCurrentUrl(){
 function saveState(silent){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   _cloudHash = JSON.stringify(state);
+  _localDirty = true; // 标记本地有未推送的修改
   // Real-time local backup on every save
   autoBackup();
   // Debounced cloud save
@@ -801,6 +809,7 @@ window.addEventListener('storage',function(e){
       if(newState&&newState.meetings){
         state=normalizeState(newState);
         _cloudHash=JSON.stringify(state);
+        _localDirty=true;
         refreshAll();
       }
     }catch(err){}
@@ -818,6 +827,8 @@ setInterval(async ()=>{
   }
   const serverHash = JSON.stringify(serverData);
   if(_cloudHash && serverHash !== _cloudHash){
+    // ⚠️ 本地有未推送的修改时禁止用旧云端数据覆盖(否则SOP点击会跳回原状态)
+    if(_localDirty || _cloudSavePending){ debouncedCloudSave(); return; }
     _cloudSyncing = true;
     state = normalizeState(serverData);
     _cloudHash = serverHash;
@@ -1056,6 +1067,10 @@ function toggleNode(idx,nodeId){
   if(!m.progress)m.progress={};
   const cur=m.progress[nodeId]||'pending';
   m.progress[nodeId]=cur==='pending'?'progress':cur==='progress'?'done':'pending';
+  // 自动状态联动: SOP全部完成→自动置为「已完成」(从进行中列表移出); 已完成会议若取消节点→自动回退「进行中」
+  const p=getProgress(m);
+  if(p.pct===100&&m.status!=='已完成'){m.status='已完成'}
+  else if(p.pct<100&&m.status==='已完成'){m.status='进行中'}
   saveState();
   renderMeetingList();
   renderProgress(idx);
@@ -1727,11 +1742,11 @@ async function init(){
     try{
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
       autoBackup();
-      // Best-effort cloud save (jsonbin: PUT + X-Master-Key, keepalive)
+      // Best-effort cloud save (jsoneditoronline: PUT body 带 _id + data JSON字符串)
       fetch(CLOUD_API, {
         method:'PUT',
-        headers:Object.assign({}, CLOUD_HEADERS, {'Content-Type':'application/json'}),
-        body:JSON.stringify(state),
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({_id:CLOUD_DOC_ID, name:'meeting-progress', data:JSON.stringify(state)}),
         keepalive:true
       }).catch(()=>{});
     }catch(e){}
@@ -1744,6 +1759,8 @@ async function init(){
         if(serverData && serverData.meetings){
           const serverHash=JSON.stringify(serverData);
           if(_cloudHash && serverHash!==_cloudHash){
+            // 本地有未推送修改时不覆盖，先推送本地最新数据
+            if(_localDirty||_cloudSavePending){debouncedCloudSave();return;}
             state=normalizeState(serverData);
             _cloudHash=serverHash;
             localStorage.setItem(STORAGE_KEY,JSON.stringify(state));

@@ -213,6 +213,7 @@ let _cloudHash = '';
 let _cloudSaveTimer = null;
 let _cloudSyncing = false;
 let _cloudSaveRetries = 0;
+let _localDirty = false; // 本地有未推送云端的修改时为true，防止轮询用旧云端数据覆盖
 
 async function cloudLoad(){
   try{
@@ -246,6 +247,7 @@ async function cloudSaveFull(stateData){
     }
     _cloudHash = JSON.stringify(stateData);
     _cloudSaveRetries = 0;
+    _localDirty = false; // 云端推送成功，清除脏标记
   }catch(e){
     console.error('Cloud save failed:',e);
     // Retry with exponential backoff (max 3 retries)
@@ -405,6 +407,7 @@ async function saveProgress(){
   // Write to localStorage and cloud
   localStorage.setItem(STORAGE_KEY,JSON.stringify(stateData));
   _cloudHash = JSON.stringify(stateData);
+  _localDirty = true; // 标记本地有未推送的修改
   debouncedCloudSave(stateData);
   lastSaveTime=new Date();
   return true;
@@ -498,6 +501,10 @@ function toggleNode(nodeId){
   if(!meeting.progress)meeting.progress={};
   const cur=meeting.progress[nodeId]||'pending';
   meeting.progress[nodeId]=cur==='pending'?'progress':cur==='progress'?'done':'pending';
+  // 自动状态联动: SOP全部完成→自动置为「已完成」; 已完成会议若取消节点→自动回退「进行中」
+  const p=getProgress(meeting);
+  if(p.pct===100&&meeting.status!=='已完成'){meeting.status='已完成'}
+  else if(p.pct<100&&meeting.status==='已完成'){meeting.status='进行中'}
   // Auto-save (async, fire and forget)
   saveProgress().then(ok=>{
     if(ok)showToast('✅ 状态已更新');
@@ -547,6 +554,7 @@ window.addEventListener('storage',function(e){
           meetingIndex=idx;
           if(!meeting.progress)meeting.progress={};
           _cloudHash=JSON.stringify(newState);
+          _localDirty=true;
           renderProgress();
           updateSyncStatus();
         }else{
@@ -564,6 +572,11 @@ setInterval(async ()=>{
   if(!serverData || !serverData.meetings) return;
   const serverHash = JSON.stringify(serverData);
   if(_cloudHash && serverHash !== _cloudHash){
+    // ⚠️ 本地有未推送的修改时禁止用旧云端数据覆盖(否则SOP点击会跳回原状态)，改为推送本地
+    if(_localDirty){
+      try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)debouncedCloudSave(JSON.parse(raw));}catch(e){}
+      return;
+    }
     _cloudSyncing = true;
     const idx=serverData.meetings.findIndex(m=>m.uid===meetingUID);
     if(idx>=0){
@@ -607,7 +620,7 @@ async function checkStaleLink(){
   // Check if this is a stale link (deployed on old domain)
   checkStaleLink();
   // Periodic sync check (server polling handles 15s, this is a 10s backup)
-  setInterval(()=>{if(passwordVerified&&meeting){loadStateAndRender()}},10000);
+  setInterval(()=>{if(passwordVerified&&meeting&&!_localDirty){loadStateAndRender()}},10000);
   // Save before page closes
   window.addEventListener('beforeunload',function(){
     if(meeting && passwordVerified){
