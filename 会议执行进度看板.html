@@ -1547,8 +1547,10 @@ function effAnalyze(dateStr, names){
       if(x.available){ wk[x.n] = Math.round(effWindowSum(n, x.s, x.e)*10)/10; arr.push(wk[x.n]); }
       else wk[x.n] = null;
     });
+    const full = arr.length === 4; // 满4周才显示会后周均
+    const post = full ? Math.round(arr.reduce((s,v)=>s+v,0)/4*10)/10 : null;
     const trend = arr.map(v => v>pre?'▲':v<pre?'▼':'─').join(' ');
-    return {n, matched:true, h:m.h, t:m.t, pre, w:wk, trend};
+    return {n, matched:true, h:m.h, t:m.t, pre, post, w:wk, trend};
   });
   return Object.assign({rows}, w);
 }
@@ -1602,9 +1604,9 @@ function effFmt(v){
 function effNumColor(v, pre){
   if(v == null) return 'var(--text-muted)';
   if(pre == null) return 'var(--text2)';
-  if(v > pre) return '#d93025';
-  if(v < pre) return '#188038';
-  return 'var(--text2)';
+  if(v > pre) return '#188038';   // 绿=上升
+  if(v < pre) return '#d93025';   // 红=下降
+  return 'var(--amber)';          // 黄=维稳
 }
 // 迷你趋势线: 5点[会前周均,W1..W4], null跳过
 function effSpark(pre, w){
@@ -1615,7 +1617,7 @@ function effSpark(pre, w){
   const rng = (mx-mn) || 1;
   const px = i => 4 + i*(W-8)/4, py = v => H-4 - (v-mn)/rng*(H-8);
   const last = pts[pts.length-1], first = pts[0];
-  const col = last.v > first.v ? '#d93025' : last.v < first.v ? '#188038' : 'var(--text2)';
+  const col = last.v > first.v ? '#188038' : last.v < first.v ? '#d93025' : 'var(--amber)';
   let d = '', dots = '';
   pts.forEach((p,k)=>{
     d += (k?' L':'M') + px(p.i).toFixed(1) + ' ' + py(p.v).toFixed(1);
@@ -1636,7 +1638,7 @@ function effBars(preAvg, weekTotals){
       s += '<text x="'+(x+bw/2)+'" y="'+(H-24-ch)+'" font-size="9" fill="var(--text-muted)" text-anchor="middle">未到</text>';
     }else{
       const h = Math.max(2, Math.round(v/mx*ch));
-      const col = i===0 ? 'var(--text-muted)' : (v>preAvg?'#d93025':v<preAvg?'#188038':'var(--text2)');
+      const col = i===0 ? 'var(--text-muted)' : (v>preAvg?'#188038':v<preAvg?'#d93025':'var(--amber)');
       s += '<rect x="'+x+'" y="'+(H-22-h)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+col+'" opacity="0.82"/>';
       s += '<text x="'+(x+bw/2)+'" y="'+(H-26-h)+'" font-size="9" fill="var(--text2)" text-anchor="middle">'+effFmt(v)+'</text>';
     }
@@ -1651,6 +1653,7 @@ function effSortVal(r, key){
   if(key === 'h') return r.h;
   if(key === 't') return r.t;
   if(key === 'pre') return r.pre;
+  if(key === 'post') return r.post != null ? r.post : null;
   if(key[0] === 'w') return (r.w[parseInt(key.slice(1))] != null) ? r.w[parseInt(key.slice(1))] : null;
   return null;
 }
@@ -1664,7 +1667,8 @@ function renderEff(){
   // 说明卡
   html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:var(--text2);line-height:1.8">';
   html += '<b style="font-size:13px">📌 会议有效性分析</b> — 已完成会议参会客户的纯销跟进：会前4周周均 vs 会后第1~4周逐周纯销<br>';
-  html += '口径：<b>会前周均</b>=会前28天纯销÷4；<b>W1~W4</b>=会后第N周(7天)纯销合计；<b>未到的周自动留空，趋势不取未到周</b>；红=上升 绿=下降<br>';
+  html += '口径：<b>会前周均</b>=会前28天纯销÷4；<b>W1~W4</b>=会后第N周(7天)纯销合计；<b>满4周后显示会后周均</b>=会后28天纯销÷4；未到的周自动留空，趋势不取未到周<br>';
+  html += '颜色：<b style="color:#188038">绿↑=增长</b>　<b style="color:#d93025">红↓=下降</b>　<b style="color:var(--amber)">黄→=维稳</b><br>';
   html += '销量数据：'+es(info.src)+'（'+info.count+'位客户，截至 '+effDateFromIdx(info.end)+'，'+es(info.updated)+'）｜医院与客户分型取自患者画像表<br>';
   html += '已完成会议自动同步；点击「上传日程海报」可自动识别参会客户</div>';
   // 工具栏
@@ -1728,8 +1732,12 @@ function renderEff(){
       html += '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:6px">';
       html += '<span>可匹配 <b>'+matched.length+'/'+(item.attendees||[]).length+'</b></span>';
       html += '<span>群体会前周均 <b>'+effFmt(totPre)+'</b> 盒/周</span>';
+      if(avW.length === 4){
+        const totPost = Math.round(avW.reduce((s,x)=>s+wkTotals[x.n-1],0)/4*10)/10;
+        html += '<span>群体会后周均 <b style="color:'+effNumColor(totPost, totPre)+'">'+effFmt(totPost)+'</b> 盒/周</span>';
+      }
       avW.forEach(x=>{ html += '<span>W'+x.n+' <b>'+effFmt(wkTotals[x.n-1])+'</b></span>'; });
-      if(delta !== null) html += '<span>均变 <b style="color:'+(delta>0?'#d93025':delta<0?'#188038':'var(--text2)')+'">'+(delta>0?'+':'')+delta+'%</b></span>';
+      if(delta !== null) html += '<span>均变 <b style="color:'+(delta>0?'#188038':delta<0?'#d93025':'var(--amber)')+'">'+(delta>0?'+':'')+delta+'%</b></span>';
       html += '</div>';
       if(missW.length){
         html += '<div style="font-size:11px;color:var(--amber);margin-bottom:8px">⚠️ W'+missW.map(x=>x.n).join('/W')+' 已过但销量数据未覆盖（数据截至 '+effDateFromIdx(info.end)+'），请「🔄 刷新销量数据」上传最新患者画像表</div>';
@@ -1763,18 +1771,21 @@ function renderEff(){
         return '<th style="cursor:pointer;user-select:none" onclick="effSort(\''+item.id+'\',\''+key+'\')" title="点击排序">'+label+'<span style="font-size:10px;color:'+(cur?'var(--red)':'var(--text3)')+'">'+arr+'</span></th>';
       };
       html += '<div class="table-wrap"><table style="width:100%"><thead><tr>';
-      html += th('name','客户') + th('h','医院') + th('t','分型') + th('pre','会前周均(盒)');
+      html += th('name','客户') + th('h','医院') + th('t','分型') + th('pre','会前周均(盒)') + th('post','会后周均(盒)');
       html += th('w1','W1') + th('w2','W2') + th('w3','W3') + th('w4','W4');
       html += '<th>趋势</th><th>折线</th><th></th></tr></thead><tbody>';
       rows.forEach(r=>{
         html += '<tr>';
         html += '<td style="white-space:nowrap">'+es(r.n)+'</td>';
         if(!r.matched){
-          html += '<td colspan="9" style="color:var(--text-muted)">患者画像表无记录</td>';
+          html += '<td colspan="10" style="color:var(--text-muted)">患者画像表无记录</td>';
         }else{
           html += '<td style="font-size:11px;color:var(--text2)">'+es(r.h)+'</td>';
           html += '<td>'+(r.t?'<span class="tag" style="font-size:10px;background:var(--bg)">'+es(r.t)+'</span>':'')+'</td>';
           html += '<td><b>'+effFmt(r.pre)+'</b></td>';
+          html += r.post != null
+            ? '<td style="color:'+effNumColor(r.post, r.pre)+'"><b>'+effFmt(r.post)+'</b></td>'
+            : '<td></td>';
           for(let n=1;n<=4;n++){
             const wk = a.weeks[n-1], v = r.w[n];
             if(v != null){
@@ -1785,7 +1796,7 @@ function renderEff(){
               html += '<td></td>';
             }
           }
-          html += '<td style="font-size:11px;white-space:nowrap">'+ (r.trend ? r.trend.split(' ').map(s=>'<span style="color:'+(s==='▲'?'#d93025':s==='▼'?'#188038':'var(--text-muted)')+'">'+s+'</span>').join('') : '<span style="color:var(--text-muted)">—</span>') +'</td>';
+          html += '<td style="font-size:11px;white-space:nowrap">'+ (r.trend ? r.trend.split(' ').map(s=>'<span style="color:'+(s==='▲'?'#188038':s==='▼'?'#d93025':'var(--amber)')+'">'+s+'</span>').join('') : '<span style="color:var(--text-muted)">—</span>') +'</td>';
           html += '<td>'+effSpark(r.pre, r.w)+'</td>';
         }
         html += '<td><button class="btn btn-sm" style="font-size:10px;padding:1px 6px;color:var(--red)" title="移除该客户" onclick="effDelCust(\''+item.id+'\',\''+es(r.n).replace(/'/g,"\\'")+'\')">✕</button></td>';
