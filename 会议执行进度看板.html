@@ -1469,6 +1469,11 @@ const EFF_PRESETS = [{"id":"eff_preset_1","name":"苏南头痛头晕规范化诊
 let _effMap = null;            // {name:{h,t,days}}
 let _effSort = {};             // entryId -> {key,dir}
 let _effFilter = {};           // entryId -> search text
+let _effCollapsed = {};        // entryId -> true=折叠（仅显示会议名+汇总条）
+function effToggleCollapse(id){
+  _effCollapsed[id] = !_effCollapsed[id];
+  renderEff();
+}
 let _effFocus = null;          // 重渲染后恢复焦点的输入框id
 let _effOcr = {entryId:null, img:null, text:'', busy:false};
 let _effFormOpen = false;
@@ -1710,9 +1715,10 @@ function renderEff(){
     const srcBadge = item.auto ? '<span class="tag tag-done" style="font-size:10px">看板同步</span>'
       : (item.source ? '<span class="tag" style="font-size:10px;background:var(--bg);color:var(--text2)">预置</span>'
       : '<span class="tag" style="font-size:10px;background:var(--bg);color:var(--text2)">手动</span>');
+    const collapsed = !!_effCollapsed[item.id] && (item.attendees||[]).length > 0;
     html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px">';
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">';
-    html += '<div><b style="font-size:14px">' + es(item.name||'') + '</b> '+srcBadge+' <span style="color:var(--text2);font-size:12px;margin-left:6px">' + es(item.date) + (item.dm?'｜DM:'+es(item.dm):'') + (item.city?'｜'+es(item.city):'') + '</span></div>';
+    html += '<div style="cursor:pointer;user-select:none;flex:1" onclick="effToggleCollapse(\''+item.id+'\')" title="'+(collapsed?'展开客户明细':'折叠为汇总')+'"><span style="display:inline-block;width:14px;color:var(--text3);font-size:11px">'+(collapsed?'▶':'▼')+'</span><b style="font-size:14px">' + es(item.name||'') + '</b> '+srcBadge+' <span style="color:var(--text2);font-size:12px;margin-left:6px">' + es(item.date) + (item.dm?'｜DM:'+es(item.dm):'') + (item.city?'｜'+es(item.city):'') + '</span></div>';
     html += '<div style="display:flex;gap:6px"><button class="btn btn-sm" style="font-size:11px;padding:2px 8px" onclick="effPosterBtn(\''+item.id+'\')">📎 上传日程海报</button>';
     html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 8px;color:var(--red)" onclick="effDelete(\''+item.id+'\')">🗑 删除</button></div></div>';
     html += '<input type="file" id="effPoster_'+item.id+'" accept="image/*" style="display:none" onchange="effPosterPick(\''+item.id+'\',this)">';
@@ -1748,6 +1754,7 @@ function renderEff(){
       if(missW.length){
         html += '<div style="font-size:11px;color:var(--amber);margin-bottom:8px">⚠️ W'+missW.map(x=>x.n).join('/W')+' 已过但销量数据未覆盖（数据截至 '+effDateFromIdx(info.end)+'），请「🔄 刷新销量数据」上传最新患者画像表</div>';
       }
+      if(!collapsed){
       // 周柱状图
       html += '<div style="margin-bottom:10px">'+effBars(totPre, wkTotals)+'</div>';
       // 筛选 + 添加客户
@@ -1809,6 +1816,7 @@ function renderEff(){
         html += '</tr>';
       });
       html += '</tbody></table></div>';
+      }
     }
     html += '</div>';
   });
