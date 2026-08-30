@@ -1608,6 +1608,12 @@ function effNumColor(v, pre){
   if(v < pre) return '#d93025';   // 红=下降
   return 'var(--amber)';          // 黄=维稳
 }
+// 数字右侧箭头: 增长绿▲ / 下降红▼ / 维稳黄→
+function effArrow(v, pre){
+  if(v == null || pre == null) return '';
+  const a = v > pre ? '▲' : v < pre ? '▼' : '→';
+  return '<span style="color:'+effNumColor(v,pre)+';margin-left:3px">'+a+'</span>';
+}
 // 迷你趋势线: 5点[会前周均,W1..W4], null跳过
 function effSpark(pre, w){
   const vals = [pre, w[1], w[2], w[3], w[4]];
@@ -1734,7 +1740,7 @@ function renderEff(){
       html += '<span>群体会前周均 <b>'+effFmt(totPre)+'</b> 盒/周</span>';
       if(avW.length === 4){
         const totPost = Math.round(avW.reduce((s,x)=>s+wkTotals[x.n-1],0)/4*10)/10;
-        html += '<span>群体会后周均 <b style="color:'+effNumColor(totPost, totPre)+'">'+effFmt(totPost)+'</b> 盒/周</span>';
+        html += '<span>群体会后周均 <b style="color:'+effNumColor(totPost, totPre)+'">'+effFmt(totPost)+'</b>'+effArrow(totPost, totPre)+' 盒/周</span>';
       }
       avW.forEach(x=>{ html += '<span>W'+x.n+' <b>'+effFmt(wkTotals[x.n-1])+'</b></span>'; });
       if(delta !== null) html += '<span>均变 <b style="color:'+(delta>0?'#188038':delta<0?'#d93025':'var(--amber)')+'">'+(delta>0?'+':'')+delta+'%</b></span>';
@@ -1784,7 +1790,7 @@ function renderEff(){
           html += '<td>'+(r.t?'<span class="tag" style="font-size:10px;background:var(--bg)">'+es(r.t)+'</span>':'')+'</td>';
           html += '<td><b>'+effFmt(r.pre)+'</b></td>';
           html += r.post != null
-            ? '<td style="color:'+effNumColor(r.post, r.pre)+'"><b>'+effFmt(r.post)+'</b></td>'
+            ? '<td style="white-space:nowrap"><b style="color:'+effNumColor(r.post, r.pre)+'">'+effFmt(r.post)+'</b>'+effArrow(r.post, r.pre)+'</td>'
             : '<td></td>';
           for(let n=1;n<=4;n++){
             const wk = a.weeks[n-1], v = r.w[n];
