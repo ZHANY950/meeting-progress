@@ -1720,8 +1720,10 @@ function renderEff(){
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px">';
     html += '<div style="cursor:pointer;user-select:none;flex:1" onclick="effToggleCollapse(\''+item.id+'\')" title="'+(collapsed?'展开客户明细':'折叠为汇总')+'"><span style="display:inline-block;width:14px;color:var(--text3);font-size:11px">'+(collapsed?'▶':'▼')+'</span><b style="font-size:14px">' + es(item.name||'') + '</b> '+srcBadge+' <span style="color:var(--text2);font-size:12px;margin-left:6px">' + es(item.date) + (item.dm?'｜DM:'+es(item.dm):'') + (item.city?'｜'+es(item.city):'') + '</span></div>';
     html += '<div style="display:flex;gap:6px"><button class="btn btn-sm" style="font-size:11px;padding:2px 8px" onclick="effPosterBtn(\''+item.id+'\')">📎 上传日程海报</button>';
+    html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 8px" onclick="effTableBtn(\''+item.id+'\')">📋 上传日程表格</button>';
     html += '<button class="btn btn-sm" style="font-size:11px;padding:2px 8px;color:var(--red)" onclick="effDelete(\''+item.id+'\')">🗑 删除</button></div></div>';
     html += '<input type="file" id="effPoster_'+item.id+'" accept="image/*" style="display:none" onchange="effPosterPick(\''+item.id+'\',this)">';
+    html += '<input type="file" id="effTableFile_'+item.id+'" accept=".xlsx,.xls,.csv" style="display:none" onchange="effTablePick(\''+item.id+'\',this)">';
     // 海报OCR面板
     if(_effOcr.entryId === item.id){
       html += '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
@@ -1732,10 +1734,25 @@ function renderEff(){
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="effOcrExtract(\''+item.id+'\')">从文字提取客户并添加</button>';
       html += '<button class="btn btn-sm" style="background:var(--bg)" onclick="_effOcr.entryId=null;renderEff()">关闭</button></div></div>';
     }
+    // 日程表格面板
+    if(_effTable.entryId === item.id){
+      html += '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
+      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📋 日程表格识别</div>';
+      if(_effTable.busy){
+        html += '<div style="font-size:12px;color:var(--text2)">正在解析表格并匹配客户…</div>';
+      }else{
+        if(_effTable.err) html += '<div style="font-size:12px;color:var(--amber);margin-bottom:8px">⚠️ '+es(_effTable.err)+'</div>';
+        html += '<div id="effTableStatus" style="font-size:12px;color:var(--text2);margin-bottom:8px">'+(_effTable.matched.length ? '✅ 从表格识别到 <b>'+_effTable.matched.length+'</b> 位患者画像表客户，可在下方修正名单（每行一个）' : '未识别到客户，请在下方手动输入姓名（每行一个）')+'</div>';
+        html += '<textarea id="effTableText" rows="4" placeholder="识别出的客户名单（可手动修正）" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:8px;font-family:var(--font)">'+es(_effTable.matched.join('\n'))+'</textarea>';
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="effTableApply(\''+item.id+'\')">从名单添加客户</button>';
+        html += '<button class="btn btn-sm" style="background:var(--bg)" onclick="_effTable.entryId=null;renderEff()">关闭</button></div>';
+      }
+      html += '</div>';
+    }
     // 无名单引导
     if(!(item.attendees||[]).length){
       html += '<div style="padding:14px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--text2);line-height:1.9">';
-      html += '⏳ 尚无参会客户名单 —— 点击「📎 上传日程海报」自动识别客户并开始分析；<br>也可在下方手动录入：</div>';
+      html += '⏳ 尚无参会客户名单 —— 点击「📋 上传日程表格」（推荐，秒级识别）或「📎 上传日程海报」自动识别客户并开始分析；<br>也可在下方手动录入：</div>';
       html += '<div style="display:flex;gap:8px;margin-top:8px">';
       html += '<input id="effAdd_'+item.id+'" list="effCustList" placeholder="输入或选择客户姓名，多个用逗号分隔" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:13px">';
       html += '<button class="btn" onclick="effAddCust(\''+item.id+'\')">添加并分析</button></div>';
@@ -1953,6 +1970,71 @@ function effOcrApply(id){
 function effOcrExtract(id){
   _effOcr.text = (document.getElementById('effOcrText')||{}).value || _effOcr.text;
   effOcrApply(id);
+}
+// ---- 日程表格识别（Excel/CSV 直接解析, 比海报OCR更快更准） ----
+let _effTable = {entryId:null, busy:false, matched:[], err:''};
+function effTableBtn(id){ document.getElementById('effTableFile_'+id).click(); }
+function effTableWorkbookText(wb){
+  const texts = [];
+  (wb.SheetNames||[]).forEach(sn=>{
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null});
+    rows.forEach(r=>{ if(r) r.forEach(c=>{ if(c != null && String(c).trim() !== '') texts.push(String(c)); }); });
+  });
+  return texts.join('\n');
+}
+function effTablePick(id, input){
+  const f = input.files && input.files[0];
+  if(!f) return;
+  _effTable = {entryId:id, busy:true, matched:[], err:''};
+  renderEff();
+  const isCsv = /\.csv$/i.test(f.name);
+  const rd = new FileReader();
+  rd.onload = async ()=>{
+    try{
+      if(typeof XLSX === 'undefined'){
+        await effLoadScript([
+          'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+          'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+          'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+          'https://cdn.bootcdn.net/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+        ]);
+      }
+      const wb = isCsv ? XLSX.read(rd.result, {type:'string'}) : XLSX.read(rd.result, {type:'array'});
+      if(!wb.SheetNames || !wb.SheetNames.length) throw new Error('表格中无工作表');
+      const allText = effTableWorkbookText(wb);
+      if(!allText.trim()) throw new Error('表格内容为空');
+      _effTable.matched = effOcrMatch(allText);
+      _effTable.busy = false;
+      if(!_effTable.matched.length) _effTable.err = '表格中未找到患者画像表客户';
+    }catch(err){
+      _effTable.busy = false;
+      _effTable.err = err && err.message ? err.message : '解析失败';
+    }
+    renderEff();
+  };
+  rd.onerror = ()=>{ _effTable.busy = false; _effTable.err = '文件读取失败'; renderEff(); };
+  if(isCsv) rd.readAsText(f, 'utf-8'); else rd.readAsArrayBuffer(f);
+  input.value = '';
+}
+function effTableApply(id){
+  const ta = document.getElementById('effTableText');
+  const text = ta ? ta.value : _effTable.matched.join('\n');
+  const cands = effOcrMatch(text);
+  if(!cands.length){
+    const st = document.getElementById('effTableStatus');
+    if(st) st.textContent = '未识别到客户，请修正名单（每行一个姓名）';
+    return;
+  }
+  ensureEffData();
+  const e = state.effectiveness.entries.find(x=>x.id === id);
+  if(!e) return;
+  e.attendees = e.attendees || [];
+  let added = 0;
+  cands.forEach(n=>{ if(!e.attendees.includes(n)){ e.attendees.push(n); added++; } });
+  saveState();
+  _effTable = {entryId:null, busy:false, matched:[], err:''};
+  renderEff();
+  console.log('[eff] 日程表格识别并添加', added, '位客户（共匹配 ' + cands.length + '）');
 }
 // ---- 刷新销量数据（上传最新患者画像表） ----
 function effRefreshPick(input){
