@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="zh-CN" data-page-node-id="djY8zntaLj2XkHeiilGKNJ">
+<head data-page-node-id="yBeY8NlD7wa8ivP1dxTGVA">
+<meta charset="UTF-8" data-page-node-id="PVoA4n4m1c2hoqILSuhZWV">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="Gi2BWrzUJjxjanRpJMpGjL">
 <title>会议执行进度看板 · 总览</title>
 <style>
 :root{--bg:#f5f5f5;--card:#fff;--text:#2c2c2a;--text2:#5f5e5a;--text3:#888780;--border:#d3d1c7;--green:#1d9e75;--green-bg:#e1f5ee;--blue:#185fa5;--blue-bg:#e6f1fb;--amber:#ba7517;--amber-bg:#faeeda;--red:#a32d2d;--red-bg:#fcebeb;--yellow:#f0c929;--yellow-bg:#fff9e6;--purple:#534ab7;--purple-bg:#eeedfe;--orange:#d85a30;--orange-bg:#faece7;--teal:#0e8c80;--teal-bg:#e0f5f3;--radius:10px;--font:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -196,6 +196,23 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
 .strategy-table .st-eff{font-size:12px;color:var(--text2)}
 .strategy-empty{color:var(--text3);padding:40px 20px;text-align:center}
 
+/* Sidebar mode toggle (会议 / 待开展) */
+.sidebar-mode{display:flex;gap:0;padding:8px 12px;border-bottom:1px solid var(--border)}
+.sidebar-mode .mode-btn{flex:1;padding:6px 0;border:1px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer;font-size:13px;transition:all .15s}
+.sidebar-mode .mode-btn:first-child{border-radius:6px 0 0 6px;border-right:none}
+.sidebar-mode .mode-btn:last-child{border-radius:0 6px 6px 0}
+.sidebar-mode .mode-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.sidebar-mode .mode-btn:hover:not(.active){color:var(--blue)}
+
+/* Planned meeting cards in sidebar */
+.planned-card{padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:all .15s;background:var(--card)}
+.planned-card:hover{border-color:var(--teal);background:var(--teal-bg)}
+.planned-card .pc-title{font-weight:500;font-size:14px;margin-bottom:4px}
+.planned-card .pc-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text2);align-items:center}
+.planned-card .pc-status{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500}
+.planned-card .pc-status.pending{background:var(--amber-bg);color:var(--amber)}
+.planned-card .pc-status.planning{background:var(--green-bg);color:var(--green)}
+
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -242,173 +259,177 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
 .cal-legend .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
 </style>
 </head>
-<body>
+<body data-page-node-id="hDWhRdM5teihjXOWqR0qJA">
 
 <!-- Password Overlay -->
-<div class="pw-overlay" id="pwOverlay">
-  <div class="pw-box">
-    <div class="icon">🔐</div>
-    <h2>会议执行进度总看板</h2>
-    <p>请输入管理密码以访问全部数据</p>
-    <input type="password" id="pwInput" placeholder="输入密码" maxlength="20" onkeydown="if(event.key==='Enter')checkMasterPassword()">
-    <div class="pw-error" id="pwError"></div>
-    <button class="pw-btn" onclick="checkMasterPassword()">验证进入</button>
+<div class="pw-overlay" id="pwOverlay" data-page-node-id="kISaERWuJAr5L0hvanID8T">
+  <div class="pw-box" data-page-node-id="J646gNG3sxua1LpVlMy5Ky">
+    <div class="icon" data-page-node-id="X3Ix0YgfJbs7r832tSgzFX">🔐</div>
+    <h2 data-page-node-id="65a9ggOA1zb28eVJzetP6E">会议执行进度总看板</h2>
+    <p data-page-node-id="h3CE3jYuNVW1b4yxQ4DjVe">请输入管理密码以访问全部数据</p>
+    <input type="password" id="pwInput" placeholder="输入密码" maxlength="20" onkeydown="if(event.key==='Enter')checkMasterPassword()" data-page-node-id="W5J6UJAcY5R3I9biYPTunn">
+    <div class="pw-error" id="pwError" data-page-node-id="bnvA5vsq39mA8OUQ23aD5p"></div>
+    <button class="pw-btn" onclick="checkMasterPassword()" data-page-node-id="wzMlai36bPevKJcj2HPGrc">验证进入</button>
   </div>
 </div>
 
 <!-- Toast -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" data-page-node-id="NUJDOvdmBGKRRv2sAO3wov"></div>
 
-<div class="layout">
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起侧边栏">◀</button>
-      <h2>会议登记表</h2>
-      <p>点击会议查看SOP进度 · 「📋」复制单场链接</p>
+<div class="layout" data-page-node-id="dvKLtVGBeNZXAJTDAyvxYq">
+  <div class="sidebar" data-page-node-id="QqfjWadbtLT3gxu5gbkja4">
+    <div class="sidebar-header" data-page-node-id="HxNwPmGDGm5Wn9e1y4OGEt">
+      <button class="sidebar-toggle" onclick="toggleSidebar()" title="收起侧边栏" data-page-node-id="UmylpVavLNCyzE6PRC3zIu">◀</button>
+      <h2 data-page-node-id="jGGjxIUxOmDlZPRM9VsGyp">会议登记表</h2>
+      <p data-page-node-id="OieDfJmZXTyla188Eew8wb">点击会议查看SOP进度 · 「📋」复制单场链接</p>
     </div>
-    <div class="meeting-filter" id="meetingFilter">
-      <button class="fbtn active" onclick="setFilter('')">全部</button>
-      <button class="fbtn" onclick="setFilter('筹备中')">筹备中</button>
-      <button class="fbtn" onclick="setFilter('进行中')">进行中</button>
-      <button class="fbtn" onclick="setFilter('已完成')">已完成</button>
+    <div class="sidebar-mode" id="sidebarMode">
+      <button class="mode-btn active" onclick="setSidebarMode('meetings')">会议</button>
+      <button class="mode-btn" onclick="setSidebarMode('planned')">待开展</button>
     </div>
-    <div class="strategy-filter" id="strategyFilter">
-      <button class="fbtn active" onclick="setStrategyFilter('')">全部策略</button>
-      <button class="fbtn" onclick="setStrategyFilter('基投')">基投</button>
-      <button class="fbtn" onclick="setStrategyFilter('增投')">增投</button>
-      <button class="fbtn" onclick="setStrategyFilter('竞投')">竞投</button>
-      <button class="fbtn" onclick="setStrategyFilter('未分类')">未分类</button>
+    <div class="meeting-filter" id="meetingFilter" data-page-node-id="g4Fyd2kkapnE8SBFS1JmCt">
+      <button class="fbtn active" onclick="setFilter('')" data-page-node-id="jqxqGTYDseP34RgoGl95yp">全部</button>
+      <button class="fbtn" onclick="setFilter('筹备中')" data-page-node-id="5FppOAd1vZ9Rp4leeeCERE">筹备中</button>
+      <button class="fbtn" onclick="setFilter('进行中')" data-page-node-id="SomF55Slce0a1Bu1S0NRjZ">进行中</button>
+      <button class="fbtn" onclick="setFilter('已完成')" data-page-node-id="n8fgCFcP95Y60GRiEiBgdf">已完成</button>
     </div>
-    <div class="meeting-list" id="meetingList"></div>
-    <div class="sidebar-footer">
-      <div class="btn-group">
-        <button class="btn btn-primary" onclick="openModal()">+ 新增会议</button>
-        <button class="btn btn-sm btn-teal" onclick="switchTab('planned');openPlannedModal()">+ 待开展</button>
-        <button class="btn btn-sm btn-share" onclick="switchTab('gantt')">甘特图</button>
-        <button class="btn btn-sm btn-teal" onclick="switchTab('calendar')">日历</button>
-        <button class="btn btn-sm" onclick="exportData();switchTab('export')">备份</button>
+    <div class="strategy-filter" id="strategyFilter" data-page-node-id="WSv8fLIjyrZJ7Wcab7waWG">
+      <button class="fbtn active" onclick="setStrategyFilter('')" data-page-node-id="XWPIYq3G7xqxGFUwJ9ZWdH">全部策略</button>
+      <button class="fbtn" onclick="setStrategyFilter('基投')" data-page-node-id="RUP2JxlusDNg2xoNrBPAx3">基投</button>
+      <button class="fbtn" onclick="setStrategyFilter('增投')" data-page-node-id="oXrkbEiNkrDaFSCQhwDXsk">增投</button>
+      <button class="fbtn" onclick="setStrategyFilter('竞投')" data-page-node-id="J8srUZqkdGO2fDWVsgi7sA">竞投</button>
+      <button class="fbtn" onclick="setStrategyFilter('未分类')" data-page-node-id="rMSB571FbbLWN68EA8iDaM">未分类</button>
+    </div>
+    <div class="meeting-list" id="meetingList" data-page-node-id="vMuPUkcKIDjfsWLACUhL5i"></div>
+    <div class="sidebar-footer" data-page-node-id="tIlgkpx1NvNVUX4rQdDHJN">
+      <div class="btn-group" data-page-node-id="DUBPUDpdbSvis1cksPtGFA">
+        <button class="btn btn-primary" onclick="openModal()" data-page-node-id="FdOCNZhY18H6RG9Pz4T6Kt">+ 新增会议</button>
+        <button class="btn btn-sm btn-teal" onclick="switchTab('planned');openPlannedModal()" data-page-node-id="oOulL0LjRFDXCqSbYrOMcV">+ 待开展</button>
+        <button class="btn btn-sm btn-share" onclick="switchTab('gantt')" data-page-node-id="NTZEK0UHalqXcHCyatgkeh">甘特图</button>
+        <button class="btn btn-sm btn-teal" onclick="switchTab('calendar')" data-page-node-id="PLmDVF1rahBSp2laZUjRqL">日历</button>
+        <button class="btn btn-sm" onclick="exportData();switchTab('export')" data-page-node-id="jCXoDlEN2e1hCKDbWf5qRT">备份</button>
       </div>
-      <div class="sync-indicator" id="syncIndicator" style="margin-top:8px;padding:6px 10px;border-radius:6px;background:var(--bg-dark);font-size:11px;display:flex;align-items:center;gap:6px">
-        <span class="sync-dot-sync" id="syncDotSync" style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></span>
-        <span id="syncTextSync" style="color:var(--text-secondary);flex:1">云端已同步</span>
-        <span id="syncTimeSync" style="color:var(--text-muted);font-size:10px"></span>
+      <div class="sync-indicator" id="syncIndicator" style="margin-top:8px;padding:6px 10px;border-radius:6px;background:var(--bg-dark);font-size:11px;display:flex;align-items:center;gap:6px" data-page-node-id="kOPIDRN27MxwejExjMpKwj">
+        <span class="sync-dot-sync" id="syncDotSync" style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0" data-page-node-id="shM2QzbIDDFxrEoIx7fgcp"></span>
+        <span id="syncTextSync" style="color:var(--text-secondary);flex:1" data-page-node-id="6AgJ3yxkwFtWWcoxFDtpR9">云端已同步</span>
+        <span id="syncTimeSync" style="color:var(--text-muted);font-size:10px" data-page-node-id="j2babF2Nc8Xqvzdok3tRnE"></span>
       </div>
     </div>
   </div>
 
-  <div class="main">
-    <div class="tabs">
-      <div class="tab active" data-tab="progress" onclick="switchTab('progress')">SOP进度看板</div>
-      <div class="tab" data-tab="planned" onclick="switchTab('planned')">待开展会议<span class="tab-badge" id="plannedBadge" style="display:none">0</span></div>
-      <div class="tab" data-tab="gantt" onclick="switchTab('gantt')">甘特图</div>
-      <div class="tab" data-tab="calendar" onclick="switchTab('calendar')">日历</div>
-      <div class="tab" data-tab="summary" onclick="switchTab('summary')">汇总统计</div>
-      <div class="tab" data-tab="strategy" onclick="switchTab('strategy')">策略</div>
-      <div class="tab" data-tab="eff" onclick="switchTab('eff')">会议有效性</div>
-      <div class="tab" data-tab="export" onclick="switchTab('export')">导入/导出</div>
+  <div class="main" data-page-node-id="2JCpMfyoUlTGzPwyWV4EgC">
+    <div class="tabs" data-page-node-id="RFrgUEY9W1LBxSkd3X5UDe">
+      <div class="tab active" data-tab="progress" onclick="switchTab('progress')" data-page-node-id="a5GrJztBeGUOJBF0E0ZGKU">SOP进度看板</div>
+      <div class="tab" data-tab="planned" onclick="switchTab('planned')" data-page-node-id="idZHvsvDve0ToBRC2ogJTc">待开展会议<span class="tab-badge" id="plannedBadge" style="display:none" data-page-node-id="K4XToNtHPaUnHOe1yUy7yw">0</span></div>
+      <div class="tab" data-tab="gantt" onclick="switchTab('gantt')" data-page-node-id="hTL3YOArdc7SUWWqFZXFMt">甘特图</div>
+      <div class="tab" data-tab="calendar" onclick="switchTab('calendar')" data-page-node-id="HQoggKw7HJf4G9DVN4tcCM">日历</div>
+      <div class="tab" data-tab="summary" onclick="switchTab('summary')" data-page-node-id="zKV1c5hYoTI8jinmHTvCXK">汇总统计</div>
+      <div class="tab" data-tab="strategy" onclick="switchTab('strategy')" data-page-node-id="AXRGT8K57VLzQEoNkN7NWd">策略</div>
+      <div class="tab" data-tab="eff" onclick="switchTab('eff')" data-page-node-id="AX3CFyZWUC2zjIsNDzPjW8">会议有效性</div>
+      <div class="tab" data-tab="export" onclick="switchTab('export')" data-page-node-id="rBnqcS9MNsYcBGvd5lR2Va">导入/导出</div>
     </div>
 
-    <div class="tab-content active" id="tab-progress">
-      <div id="progressContent"><div class="empty-state"><div class="icon">📋</div><p>请从左侧选择一场会议，或点击「新增会议」开始</p></div></div>
+    <div class="tab-content active" id="tab-progress" data-page-node-id="YUYlPQEpHw3jTLoQ4rnKFZ">
+      <div id="progressContent" data-page-node-id="BVBFUDPCYFoZlG6MDNUJEP"><div class="empty-state" data-page-node-id="MozjTUM8mMBdaCYArh2wVr"><div class="icon" data-page-node-id="gIrfdVE60qEBOrZgN1rYGe">📋</div><p data-page-node-id="jESnCoACyi61SRU2QOefbo">请从左侧选择一场会议，或点击「新增会议」开始</p></div></div>
     </div>
-    <div class="tab-content" id="tab-planned"><div id="plannedContent"></div></div>
-    <div class="tab-content" id="tab-gantt"><div id="ganttContent"></div></div>
-    <div class="tab-content" id="tab-calendar"><div id="calendarContent"></div></div>
-    <div class="tab-content" id="tab-summary"><div id="summaryContent"></div></div>
-    <div class="tab-content" id="tab-strategy"><div id="strategyContent"></div></div>
-    <div class="tab-content" id="tab-eff"><div id="effContent"></div></div>
-    <div class="tab-content" id="tab-export">
-      <div class="export-section">
-        <h3 style="margin-bottom:8px">导出数据备份 (JSON)</h3>
-        <p style="font-size:12px;color:var(--text3);margin-bottom:8px">定期导出备份，防止浏览器数据丢失。粘贴下方可恢复。</p>
+    <div class="tab-content" id="tab-planned" data-page-node-id="aCYgUd8EbVeyaOaNkrCw4e"><div id="plannedContent" data-page-node-id="Ygb9vbwCwQzrTGreWbBbKJ"></div></div>
+    <div class="tab-content" id="tab-gantt" data-page-node-id="8OfxsJOfJI3r9AvDQZkqmx"><div id="ganttContent" data-page-node-id="qpFrFubkcEobdiz0Es3YfK"></div></div>
+    <div class="tab-content" id="tab-calendar" data-page-node-id="cF1yr0BqGPgwENAVKoLKa2"><div id="calendarContent" data-page-node-id="BlnDdIuiRKyQvvLWCv3EIB"></div></div>
+    <div class="tab-content" id="tab-summary" data-page-node-id="gydoGsbCUOZqySihaYwKDU"><div id="summaryContent" data-page-node-id="0hHsLbKv2PPukDopyHH5ad"></div></div>
+    <div class="tab-content" id="tab-strategy" data-page-node-id="L2ZeKz8k8TfIAp5f6FDcP1"><div id="strategyContent" data-page-node-id="WRCNFD08Kl8eMiqSth1MPk"></div></div>
+    <div class="tab-content" id="tab-eff" data-page-node-id="rMtib7GIULhj4T2amwI9dl"><div id="effContent" data-page-node-id="MYqzNKCs3FkYutYFXMGzbz"></div></div>
+    <div class="tab-content" id="tab-export" data-page-node-id="OQPXAQ2ESazQKdoCwpA0XB">
+      <div class="export-section" data-page-node-id="IXUy09MkMavtsfk83pwVNe">
+        <h3 style="margin-bottom:8px" data-page-node-id="Lc5rza8xxILko6WFEETe4W">导出数据备份 (JSON)</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:8px" data-page-node-id="cd7LybWY32hrURhLcqOR5d">定期导出备份，防止浏览器数据丢失。粘贴下方可恢复。</p>
         <textarea id="exportJson" readonly></textarea>
-        <div class="btn-group" style="margin-top:8px">
-          <button class="btn btn-sm" onclick="exportData()">刷新导出</button>
-          <button class="btn btn-sm" onclick="downloadBackup()">下载备份文件</button>
-          <button class="btn btn-sm" onclick="copyExport()">复制到剪贴板</button>
+        <div class="btn-group" style="margin-top:8px" data-page-node-id="6wMy5J0vQ8PJgjbSjG0MRZ">
+          <button class="btn btn-sm" onclick="exportData()" data-page-node-id="rhuy49jEDWQSFYGPNEkD0U">刷新导出</button>
+          <button class="btn btn-sm" onclick="downloadBackup()" data-page-node-id="uzhezoqUmUo9idp0SyRGrc">下载备份文件</button>
+          <button class="btn btn-sm" onclick="copyExport()" data-page-node-id="2gnlZw7WxW9Hrsw85WsMQs">复制到剪贴板</button>
         </div>
       </div>
-      <div class="export-section">
-        <h3 style="margin-bottom:8px">导入恢复数据 (JSON)</h3>
+      <div class="export-section" data-page-node-id="qnzwonjjLWawDt006ufmjh">
+        <h3 style="margin-bottom:8px" data-page-node-id="C51CFL6pOHfhy4ECWuS7Xw">导入恢复数据 (JSON)</h3>
         <textarea id="importJson" placeholder="在此粘贴JSON数据..."></textarea>
-        <div class="btn-group" style="margin-top:8px">
-          <button class="btn btn-sm btn-primary" onclick="importData()">导入数据</button>
-          <button class="btn btn-sm" onclick="document.getElementById('importFile').click()">从文件导入</button>
-          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importFromFile(event)">
+        <div class="btn-group" style="margin-top:8px" data-page-node-id="UuqZfoTKE8guPCcul9avaj">
+          <button class="btn btn-sm btn-primary" onclick="importData()" data-page-node-id="6HMleYxmJNcDW73lLKB3Gu">导入数据</button>
+          <button class="btn btn-sm" onclick="document.getElementById('importFile').click()" data-page-node-id="RLZouD8d8mCWqWTMrlI388">从文件导入</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importFromFile(event)" data-page-node-id="5bNhmOB6yidgbPwzOkobs3">
         </div>
       </div>
-      <div style="margin-top:16px">
-        <button class="btn btn-sm btn-danger" onclick="clearAll()">清空所有数据</button>
+      <div style="margin-top:16px" data-page-node-id="EbWmlyQpMtsWXdIABRp3Ts">
+        <button class="btn btn-sm btn-danger" onclick="clearAll()" data-page-node-id="pV95XfDbZtYc05cQnAiODr">清空所有数据</button>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Floating expand button when sidebar collapsed -->
-<button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebar()" title="展开会议登记表">▶</button>
+<button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebar()" title="展开会议登记表" data-page-node-id="P9t9eOA2uLlw7oqVI7sjav">▶</button>
 
 <!-- Meeting Modal -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h3 id="modalTitle">新增会议</h3>
-    <div class="form-group"><label>会议名称 *</label><input type="text" id="meetingName" placeholder="例：苏州眩晕巡讲" oninput="checkPlannedLinkage()"></div>
-    <div class="form-group" id="linkageGroup"><div class="linkage-hint" id="linkageHint"></div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>开始日期 *</label><input type="date" id="meetingStartDate"></div>
-      <div class="form-group"><label>结束日期 *</label><input type="date" id="meetingEndDate"></div>
+<div class="modal-overlay" id="modal" data-page-node-id="bIYkKlWTrflbHDfqRVyahl">
+  <div class="modal" data-page-node-id="8D6EaLZnOml1TASlCFI93T">
+    <h3 id="modalTitle" data-page-node-id="Dzp4jOXwHGNAFsENoSsDUD">新增会议</h3>
+    <div class="form-group" data-page-node-id="lDPONob93KXRpqI2OL1GgK"><label data-page-node-id="89CTeOeh1EaksOYUQMOGsp">会议名称 *</label><input type="text" id="meetingName" placeholder="例：苏州眩晕巡讲" oninput="checkPlannedLinkage()" data-page-node-id="VPyTARymnAwS7k2ME8JvA1"></div>
+    <div class="form-group" id="linkageGroup" data-page-node-id="k5QnFh1Sg7Ig38tEm2uqbQ"><div class="linkage-hint" id="linkageHint" data-page-node-id="9rGhn3LwRLDozYKhc22Zye"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" data-page-node-id="yD374T83a887BMFCwu4p9y">
+      <div class="form-group" data-page-node-id="24Ui1jdTsttzVDjE2tb8uk"><label data-page-node-id="OeYCZ2UN9BEqFtywsf8Zy3">开始日期 *</label><input type="date" id="meetingStartDate" data-page-node-id="HqXw2T4izDFx8VqkQpicAK"></div>
+      <div class="form-group" data-page-node-id="f6U4qw5d8KAs3iAVXm55ah"><label data-page-node-id="QINZOtm2wLc7U2glXDxHku">结束日期 *</label><input type="date" id="meetingEndDate" data-page-node-id="iLPVEFZWFhGVHYC1xFIoGw"></div>
     </div>
-    <div class="form-group"><label>类型 *</label><select id="meetingType" onchange="toggleExternalFields()"><option value="线下">线下会议</option><option value="线上">线上会议</option><option value="外部会议">外部会议</option></select></div>
-    <div class="form-group"><label>DM团队</label><select id="meetingDm"><option value="">请选择</option><option value="何方禹">苏南 - 何方禹</option><option value="孟鈃">南1 - 孟鈃</option><option value="郑家成">南2 - 郑家成</option><option value="李路">济南 - 李路</option><option value="张鑫">青岛 - 张鑫</option><option value="卜先峰">安徽 - 卜先峰</option></select></div>
-    <div class="form-group"><label>城市</label><input type="text" id="meetingCity" placeholder="例：苏州"></div>
-    <div class="form-group"><label>会议总监</label><input type="text" id="meetingDirector" placeholder="例：张云"></div>
-    <div class="form-group"><label>状态</label><select id="meetingStatus"><option value="筹备中">筹备中</option><option value="进行中">进行中</option><option value="已完成">已完成</option></select></div>
-    <div class="form-group"><label>策略</label><select id="meetingStrategy"><option value="">未分类</option><option value="基投">基投</option><option value="增投">增投</option><option value="竞投">竞投</option></select></div>
-    <div class="form-group"><label>备注</label><input type="text" id="meetingNotes" placeholder="可填额外说明"></div>
-    <div id="externalFields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
-      <h3 style="margin-bottom:10px;font-size:13px;color:var(--teal)">外部会议邀请管理</h3>
-      <div class="form-group">
-        <label>DM名额分配</label>
-        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
-          <thead><tr>
-            <th style="text-align:left;padding:4px 6px;border-bottom:2px solid var(--border)">DM</th>
-            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)">名额</th>
-            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)">已邀</th>
+    <div class="form-group" data-page-node-id="cA2mR7HkM2Jlf2n8F1Mhzn"><label data-page-node-id="xtafqkH7FDHYTsCVesEwP6">类型 *</label><select id="meetingType" onchange="toggleExternalFields()" data-page-node-id="Fk2fNH3lH8ZvCXv2P1HzJQ"><option value="线下" data-page-node-id="8tNIlbWDg9B8pnGrGcRQAU">线下会议</option><option value="线上" data-page-node-id="l0Brw4VIVlWzchJpdHu6RP">线上会议</option><option value="外部会议" data-page-node-id="DW3UX75nlGCYnbFnF5EfhI">外部会议</option></select></div>
+    <div class="form-group" data-page-node-id="6En9EckvdBdnOfHvgKJo8k"><label data-page-node-id="zsoMemn4Jsuvz1p5c3ssCu">DM团队</label><select id="meetingDm" data-page-node-id="TWcWXf7wK56fkkWcMpni9f"><option value="" data-page-node-id="MSiaWZRRYETyr1x9Lln5Xr">请选择</option><option value="何方禹" data-page-node-id="t5oD7hRFlA7kpOQSuPDxKy">苏南 - 何方禹</option><option value="孟鈃" data-page-node-id="4klEchppPeJSdgC3xRxFl0">南1 - 孟鈃</option><option value="郑家成" data-page-node-id="EDR40JZecZmUFbTWth0Xhs">南2 - 郑家成</option><option value="李路" data-page-node-id="jDdPCzel6A3KTJq1HnxYiv">济南 - 李路</option><option value="张鑫" data-page-node-id="5xlGou3yrXeZH7VHP8GSME">青岛 - 张鑫</option><option value="卜先峰" data-page-node-id="qxFZb8T65Ae05jsAzk8Lnz">安徽 - 卜先峰</option></select></div>
+    <div class="form-group" data-page-node-id="5HvGAvC34jzDen2UWjTeMJ"><label data-page-node-id="yovZuHjl67XPtCPo5XgkoV">城市</label><input type="text" id="meetingCity" placeholder="例：苏州" data-page-node-id="7TGt9w9Bi4iwUURCnpeSJL"></div>
+    <div class="form-group" data-page-node-id="jrMYB3I6BRCKHojwhP39TC"><label data-page-node-id="N6nz81hgSVhUD1crNbIocD">会议总监</label><input type="text" id="meetingDirector" placeholder="例：张云" data-page-node-id="M4yx9VHyNi1JMcONfLgptr"></div>
+    <div class="form-group" data-page-node-id="FGQVnj9jh5PEv27tJqBXdi"><label data-page-node-id="VqDGVbNTEShBYMlhPsnr9O">状态</label><select id="meetingStatus" data-page-node-id="L8m8HiL8RVI9AmdQuksNBA"><option value="筹备中" data-page-node-id="PaeT8lIq4C0WrNKdF9jqNQ">筹备中</option><option value="进行中" data-page-node-id="f1ISfrUF8bHrr0xIKhkQkl">进行中</option><option value="已完成" data-page-node-id="jPlW24xYwzv7GaZO51wDux">已完成</option></select></div>
+    <div class="form-group" data-page-node-id="xAc9I01xdaUvGppXaM1q7O"><label data-page-node-id="R0jdUXucWOoe4iFSxO7pzd">策略</label><select id="meetingStrategy" data-page-node-id="GazabsDBVkGUoCknwQnNvj"><option value="" data-page-node-id="Xlu3k4me8DJYFg6RpwiEDx">未分类</option><option value="基投" data-page-node-id="D7gqOs1miEYhlH9TUrui0H">基投</option><option value="增投" data-page-node-id="91XyGp48LNyDHY9rHH8LZa">增投</option><option value="竞投" data-page-node-id="EmTRUUWYbKkKF468NmE2C2">竞投</option></select></div>
+    <div class="form-group" data-page-node-id="LVs2VUAJLHunIjHf0rotUc"><label data-page-node-id="AUEnruPH7AqnNeUYyxQIZS">备注</label><input type="text" id="meetingNotes" placeholder="可填额外说明" data-page-node-id="XwSliN8DIc9ng3dhGnUvnH"></div>
+    <div id="externalFields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px" data-page-node-id="4Gr70h4xhwYH4gD334tTVs">
+      <h3 style="margin-bottom:10px;font-size:13px;color:var(--teal)" data-page-node-id="j8ELfcR6u7ulVHrxYftJtA">外部会议邀请管理</h3>
+      <div class="form-group" data-page-node-id="0pmp5kswqZ4ppzgeCsgk4U">
+        <label data-page-node-id="GLFekTCBW3NlG3l7jCXctf">DM名额分配</label>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px" data-page-node-id="uZy73pQ7YHqQGuiBXe7wB2">
+          <thead data-page-node-id="t7BWjAIqYG8wTP1egNxFMv"><tr data-page-node-id="kBHUVz55MBnnenIExaklDj">
+            <th style="text-align:left;padding:4px 6px;border-bottom:2px solid var(--border)" data-page-node-id="IosTNbDDmoiQiqYY8AYT8a">DM</th>
+            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)" data-page-node-id="MByMGS3ftGHfW6WWapfmsg">名额</th>
+            <th style="text-align:center;padding:4px 6px;border-bottom:2px solid var(--border)" data-page-node-id="ZNioLSUpA1X0C6PrjAUNNn">已邀</th>
           </tr></thead>
-          <tbody id="extDmQuotaBody"></tbody>
-          <tfoot><tr style="border-top:2px solid var(--border)">
-            <td style="padding:4px 6px;font-weight:600">合计</td>
-            <td id="extTotalQuota" style="text-align:center;font-weight:600;color:var(--teal)">0</td>
-            <td id="extTotalInvited" style="text-align:center;font-weight:600;color:var(--teal)">0</td>
+          <tbody id="extDmQuotaBody" data-page-node-id="aQcL4YpbWZR75bMxMdBj1H"></tbody>
+          <tfoot data-page-node-id="gUDId31NrWZaaGdEpn1NO2"><tr style="border-top:2px solid var(--border)" data-page-node-id="1Xhk507EHOnqF8NgzXT1tt">
+            <td style="padding:4px 6px;font-weight:600" data-page-node-id="u1UinCsQyMZf934OIG1nON">合计</td>
+            <td id="extTotalQuota" style="text-align:center;font-weight:600;color:var(--teal)" data-page-node-id="9ePtRNByhgIg2lM9V97Nmn">0</td>
+            <td id="extTotalInvited" style="text-align:center;font-weight:600;color:var(--teal)" data-page-node-id="ng94bhI82MuDoMZ0Ag0YXA">0</td>
           </tr></tfoot>
         </table>
       </div>
-      <div class="form-group"><label>邀请截止日期</label><input type="date" id="extInviteDl"></div>
-      <div class="form-group"><label>专家替换截止日期</label><input type="date" id="extReplaceDl"></div>
-      <div class="form-group"><label>专家行程收集截止日期</label><input type="date" id="extTravelDl"></div>
+      <div class="form-group" data-page-node-id="BxKrsqLb4PKKkEhJN8yGCd"><label data-page-node-id="2hFyIGclvtmxewJcBCTCER">邀请截止日期</label><input type="date" id="extInviteDl" data-page-node-id="Em1Jy00bHjCtScq4ZPk34P"></div>
+      <div class="form-group" data-page-node-id="eBE2rKCz8BggfgZYtVyYBP"><label data-page-node-id="knhGmj0ScC4IktX74xhWP4">专家替换截止日期</label><input type="date" id="extReplaceDl" data-page-node-id="NsXeLrRkwAJZJv1SqMJoNm"></div>
+      <div class="form-group" data-page-node-id="ESHv5inaN1hoFGCOZVacVA"><label data-page-node-id="WB2n0MphdlHfHTmT8EcexO">专家行程收集截止日期</label><input type="date" id="extTravelDl" data-page-node-id="EmRPN2PmJbHYjdgUtVX0kD"></div>
     </div>
-    <input type="hidden" id="editId">
-    <div class="btn-group" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn" onclick="closeModal()">取消</button>
-      <button class="btn btn-primary" onclick="saveMeeting()">保存</button>
+    <input type="hidden" id="editId" data-page-node-id="hL7SvAr2OzCWzCY7HZd62k">
+    <div class="btn-group" style="margin-top:16px;justify-content:flex-end" data-page-node-id="TgE5PEb2T29Y2reHh0h43j">
+      <button class="btn" onclick="closeModal()" data-page-node-id="CDAFluP92vF7HVtUYpcQwZ">取消</button>
+      <button class="btn btn-primary" onclick="saveMeeting()" data-page-node-id="EajS8X3RTgD50sM2CNHBif">保存</button>
     </div>
   </div>
 </div>
 
 <!-- Planned Meeting Modal -->
-<div class="modal-overlay" id="plannedModal">
-  <div class="modal">
-    <h3 id="plannedModalTitle">新增待开展会议</h3>
-    <div class="form-group"><label>会议/系列名称 *</label><input type="text" id="pmName" placeholder="例：治痛梦工坊（系列名，不含期数）"></div>
-    <div class="form-group"><label>计划场次 *</label><input type="number" id="pmSessions" value="1" min="1" max="50"><div class="hint">1=单场会议；>1=系列会议（如3场）</div></div>
-    <div class="form-group"><label>形式</label><select id="pmForm"><option value="不限">不限</option><option value="线下">线下</option><option value="线上">线上</option></select></div>
-    <div class="form-group"><label>负责DM</label><select id="pmDm"><option value="">请选择</option><option value="何方禹">苏南 - 何方禹</option><option value="孟鈃">南1 - 孟鈃</option><option value="郑家成">南2 - 郑家成</option><option value="李路">济南 - 李路</option><option value="张鑫">青岛 - 张鑫</option><option value="卜先峰">安徽 - 卜先峰</option></select></div>
-    <div class="form-group"><label>策略</label><select id="pmStrategy"><option value="">未分类</option><option value="基投">基投</option><option value="增投">增投</option><option value="竞投">竞投</option></select></div>
-    <div class="form-group"><label>计划来源</label><select id="pmSource"><option value="年度会议计划">年度会议计划</option><option value="季度规划">季度规划</option><option value="月度计划">月度计划</option><option value="临时新增">临时新增</option><option value="区域规划">区域规划</option><option value="总部下达">总部下达</option></select></div>
-    <div class="form-group"><label>备注</label><input type="text" id="pmNote" placeholder="可填额外说明"></div>
-    <input type="hidden" id="pmEditId">
-    <div class="btn-group" style="margin-top:16px;justify-content:flex-end">
-      <button class="btn" onclick="closePlannedModal()">取消</button>
-      <button class="btn btn-primary" onclick="savePlannedMeeting()">保存</button>
+<div class="modal-overlay" id="plannedModal" data-page-node-id="eeGn6PZlcUQfqWnVHziuFS">
+  <div class="modal" data-page-node-id="tyc5pnECkO7LOyKmUsYLas">
+    <h3 id="plannedModalTitle" data-page-node-id="lcLRFhJmedISfzTcrNQlA7">新增待开展会议</h3>
+    <div class="form-group" data-page-node-id="JAwxttQcYY3X8DMv6rmR0q"><label data-page-node-id="ppiD5qyXCdd7g8G0k21PNq">会议/系列名称 *</label><input type="text" id="pmName" placeholder="例：治痛梦工坊（系列名，不含期数）" data-page-node-id="Vleszi1IOdBEcTApFXbHYK"></div>
+    <div class="form-group" data-page-node-id="b35p6EixwpntHLCFKCZl10"><label data-page-node-id="jKg9FOSdeoo1J538yJEyW3">计划场次 *</label><input type="number" id="pmSessions" value="1" min="1" max="50" data-page-node-id="2smhPGSO3HO6Aq9ikQILeS"><div class="hint" data-page-node-id="r5fVNAKQAOEHhZLP01kSrG">1=单场会议；>1=系列会议（如3场）</div></div>
+    <div class="form-group" data-page-node-id="cIpPOY7lu40YwxBLvGXwoz"><label data-page-node-id="OYy7hHi3XxH14Q1omt0YFQ">形式</label><select id="pmForm" data-page-node-id="YZFNryryDHdLtkBgQg86PK"><option value="不限" data-page-node-id="AogXQNuLChNoGBZVR80zsy">不限</option><option value="线下" data-page-node-id="7vt0z8Ndp90QIsmwz6LacJ">线下</option><option value="线上" data-page-node-id="UGMbbW8QsafXlxcVzqNNNX">线上</option></select></div>
+    <div class="form-group" data-page-node-id="dIy2ewy93zbUCDrNbaGntk"><label data-page-node-id="GpNcnmxLbSiKOvplPJTpJC">负责DM</label><select id="pmDm" data-page-node-id="FL1KuBTgGVaKFitFHJBIoB"><option value="" data-page-node-id="7cmvGP1CzuYYcPzRaE2zsq">请选择</option><option value="何方禹" data-page-node-id="aQ5Br2blA68EVj1G37Ob9w">苏南 - 何方禹</option><option value="孟鈃" data-page-node-id="xDgB2zDBLFhdzQj7DQ1AsT">南1 - 孟鈃</option><option value="郑家成" data-page-node-id="zTFsrhJybHOasBWg92R45g">南2 - 郑家成</option><option value="李路" data-page-node-id="YTjJQV19ozQTeNoG1b2UpQ">济南 - 李路</option><option value="张鑫" data-page-node-id="vZlCADlZkAWGuu2pBStMpm">青岛 - 张鑫</option><option value="卜先峰" data-page-node-id="cgq66UIZf5ysUzkLiAJ0vv">安徽 - 卜先峰</option></select></div>
+    <div class="form-group" data-page-node-id="J6aHX4rGmb0HJmcajP8aD6"><label data-page-node-id="LDlHTxtI69gghR6vOiJqRA">策略</label><select id="pmStrategy" data-page-node-id="ApWH7BbEEV8orPuMKRuRvq"><option value="" data-page-node-id="hyiwwjzmxcEnsoKiZ3RgKr">未分类</option><option value="基投" data-page-node-id="r2ut64eRFOoNNlYRGp2f4Z">基投</option><option value="增投" data-page-node-id="c7hcinRsg7rG1JFieBmYRm">增投</option><option value="竞投" data-page-node-id="I9l3TQK2RCitEHkMA5waWO">竞投</option></select></div>
+    <div class="form-group" data-page-node-id="X1YpVGoAcixA8HGyJo8Bld"><label data-page-node-id="d695gsVkqr6MaJLz45hDOw">计划来源</label><select id="pmSource" data-page-node-id="hbBoOyOiSf2UBKeXNtwDDs"><option value="年度会议计划" data-page-node-id="ciOErWq8q9cGGNsqBprhoT">年度会议计划</option><option value="季度规划" data-page-node-id="pkGPOQKhIJh3w7PJUYr6Wl">季度规划</option><option value="月度计划" data-page-node-id="E1qTNPEWknevTUgOidWdtk">月度计划</option><option value="临时新增" data-page-node-id="8j5GFh70jzHoDLAG8HGQpl">临时新增</option><option value="区域规划" data-page-node-id="CTNFfEKO7O4X7D7D7BdXAn">区域规划</option><option value="总部下达" data-page-node-id="UrZazSi4u71WAd763PyKRe">总部下达</option></select></div>
+    <div class="form-group" data-page-node-id="aeZdvYNJQHL31TK1fLDUcq"><label data-page-node-id="sBYIUwt2GzgNlSVkvCOjAi">备注</label><input type="text" id="pmNote" placeholder="可填额外说明" data-page-node-id="CSFFBJu9XmVnAOOnn69sQh"></div>
+    <input type="hidden" id="pmEditId" data-page-node-id="BAnkwpPhBJnkM5BwUtPrR3">
+    <div class="btn-group" style="margin-top:16px;justify-content:flex-end" data-page-node-id="BOu5UpSsmVVRZqukK1M9VA">
+      <button class="btn" onclick="closePlannedModal()" data-page-node-id="dUOaZAQjdJpp1ntOffRqXW">取消</button>
+      <button class="btn btn-primary" onclick="savePlannedMeeting()" data-page-node-id="EKTfhNRRVoKZHb6Pco6jOF">保存</button>
     </div>
   </div>
 </div>
@@ -492,6 +513,7 @@ let state = {meetings:[], plannedMeetings:[]};
 let passwordVerified = false;
 let meetingFilter = '';
 let strategyFilter = '';
+let sidebarMode = 'meetings'; // 'meetings' | 'planned'
 let calendarMonth = new Date();
 let calendarDMFilter = '';
 
@@ -905,6 +927,7 @@ function refreshAll(){
 
 // ============ Render: Meeting List ============
 function renderMeetingList(){
+  if(sidebarMode==='planned'){ renderSidebarPlanned(); return; }
   const el=document.getElementById('meetingList');
   if(!state.meetings.length){
     el.innerHTML='<div class="empty-state"><p style="font-size:12px">暂无会议，点击下方新增</p></div>';
@@ -963,6 +986,39 @@ function renderMeetingList(){
   }).join('');
 }
 
+function renderSidebarPlanned(){
+  const el=document.getElementById('meetingList');
+  if(!state.plannedMeetings||!state.plannedMeetings.length){
+    el.innerHTML='<div class="empty-state"><p style="font-size:12px">暂无待开展会议</p></div>';
+    return;
+  }
+  const list=[...state.plannedMeetings].map((pm,i)=>({pm,i})).sort((a,b)=>{
+    const sa=getPlannedStatus(a.pm).status==='待开展'?0:1;
+    const sb=getPlannedStatus(b.pm).status==='待开展'?0:1;
+    if(sa!==sb)return sa-sb;
+    return a.pm.name.localeCompare(b.pm.name,'zh');
+  });
+  el.innerHTML=list.map(x=>{
+    const pm=x.pm; const i=x.i;
+    const st=getPlannedStatus(pm);
+    const strategyTag=pm.strategy?`tag-strategy-${pm.strategy}`:'tag-strategy-none';
+    const strategyLabel=pm.strategy||'未分类';
+    const formCls=pm.form==='线下'?'tag-offline':pm.form==='线上'?'tag-online':'tag-external';
+    return `<div class="planned-card" onclick="openPlannedModal(${i})">
+      <div class="pc-title">${es(pm.name)}</div>
+      <div class="pc-meta">
+        <span class="tag ${formCls}">${pm.form||'不限'}</span>
+        <span>${pm.totalSessions}场${pm.totalSessions>1?'（系列）':'（单场）'}</span>
+        <span>DM: ${pm.dm||'-'}</span>
+        <span class="tag ${strategyTag}">${strategyLabel}</span>
+        <span class="pc-status ${st.status==='待开展'?'pending':'planning'}">${st.status} ${st.sessions}</span>
+      </div>
+      ${pm.note?`<div style="font-size:11px;color:var(--text3);margin-top:4px">${es(pm.note)}</div>`:''}
+      <div style="font-size:10px;color:var(--text3);margin-top:4px">来源: ${es(pm.source||'-')}</div>
+    </div>`;
+  }).join('');
+}
+
 function setFilter(f){
   meetingFilter=f;
   document.querySelectorAll('.meeting-filter .fbtn').forEach(b=>{
@@ -976,6 +1032,17 @@ function setStrategyFilter(f){
     const active = (f===''&&b.textContent==='全部策略') || b.textContent===f;
     b.classList.toggle('active',active);
   });
+  renderMeetingList();
+}
+function setSidebarMode(mode){
+  sidebarMode=mode;
+  document.querySelectorAll('.sidebar-mode .mode-btn').forEach(b=>{
+    b.classList.toggle('active',(mode==='meetings'&&b.textContent==='会议')||(mode==='planned'&&b.textContent==='待开展'));
+  });
+  const mf=document.getElementById('meetingFilter');
+  const sf=document.getElementById('strategyFilter');
+  if(mf)mf.style.display=mode==='meetings'?'flex':'none';
+  if(sf)sf.style.display=mode==='meetings'?'flex':'none';
   renderMeetingList();
 }
 
