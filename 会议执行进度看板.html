@@ -176,6 +176,26 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
 .pm-actions{display:flex;gap:6px}
 .pm-linkage-notice{background:var(--teal-bg);border:1px solid var(--teal);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;display:flex;align-items:center;gap:8px}
 
+/* Strategy */
+.tag-strategy-基投{background:var(--blue-bg);color:var(--blue)}
+.tag-strategy-增投{background:var(--purple-bg);color:var(--purple)}
+.tag-strategy-竞投{background:var(--orange-bg);color:var(--orange)}
+.tag-strategy-none{background:#eee;color:var(--text3)}
+.strategy-filter{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.strategy-filter .fbtn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
+.strategy-filter .fbtn:hover{border-color:var(--blue);color:var(--blue)}
+.strategy-filter .fbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.strategy-section{margin-bottom:20px}
+.strategy-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.strategy-table{width:100%;border-collapse:collapse;font-size:12px}
+.strategy-table th{text-align:left;padding:10px 12px;background:#f5f5f5;border-bottom:2px solid var(--border);font-weight:500;color:var(--text2);white-space:nowrap}
+.strategy-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+.strategy-table .st-name{font-weight:500;cursor:pointer}
+.strategy-table .st-name:hover{color:var(--blue);text-decoration:underline}
+.strategy-table .st-time{color:var(--text3);white-space:nowrap}
+.strategy-table .st-eff{font-size:12px;color:var(--text2)}
+.strategy-empty{color:var(--text3);padding:40px 20px;text-align:center}
+
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100;align-items:center;justify-content:center}
 .modal-overlay.show{display:flex}
@@ -252,6 +272,13 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
       <button class="fbtn" onclick="setFilter('进行中')">进行中</button>
       <button class="fbtn" onclick="setFilter('已完成')">已完成</button>
     </div>
+    <div class="strategy-filter" id="strategyFilter">
+      <button class="fbtn active" onclick="setStrategyFilter('')">全部策略</button>
+      <button class="fbtn" onclick="setStrategyFilter('基投')">基投</button>
+      <button class="fbtn" onclick="setStrategyFilter('增投')">增投</button>
+      <button class="fbtn" onclick="setStrategyFilter('竞投')">竞投</button>
+      <button class="fbtn" onclick="setStrategyFilter('未分类')">未分类</button>
+    </div>
     <div class="meeting-list" id="meetingList"></div>
     <div class="sidebar-footer">
       <div class="btn-group">
@@ -276,6 +303,7 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
       <div class="tab" data-tab="gantt" onclick="switchTab('gantt')">甘特图</div>
       <div class="tab" data-tab="calendar" onclick="switchTab('calendar')">日历</div>
       <div class="tab" data-tab="summary" onclick="switchTab('summary')">汇总统计</div>
+      <div class="tab" data-tab="strategy" onclick="switchTab('strategy')">策略</div>
       <div class="tab" data-tab="eff" onclick="switchTab('eff')">会议有效性</div>
       <div class="tab" data-tab="export" onclick="switchTab('export')">导入/导出</div>
     </div>
@@ -287,6 +315,7 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
     <div class="tab-content" id="tab-gantt"><div id="ganttContent"></div></div>
     <div class="tab-content" id="tab-calendar"><div id="calendarContent"></div></div>
     <div class="tab-content" id="tab-summary"><div id="summaryContent"></div></div>
+    <div class="tab-content" id="tab-strategy"><div id="strategyContent"></div></div>
     <div class="tab-content" id="tab-eff"><div id="effContent"></div></div>
     <div class="tab-content" id="tab-export">
       <div class="export-section">
@@ -333,6 +362,7 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
     <div class="form-group"><label>城市</label><input type="text" id="meetingCity" placeholder="例：苏州"></div>
     <div class="form-group"><label>会议总监</label><input type="text" id="meetingDirector" placeholder="例：张云"></div>
     <div class="form-group"><label>状态</label><select id="meetingStatus"><option value="筹备中">筹备中</option><option value="进行中">进行中</option><option value="已完成">已完成</option></select></div>
+    <div class="form-group"><label>策略</label><select id="meetingStrategy"><option value="">未分类</option><option value="基投">基投</option><option value="增投">增投</option><option value="竞投">竞投</option></select></div>
     <div class="form-group"><label>备注</label><input type="text" id="meetingNotes" placeholder="可填额外说明"></div>
     <div id="externalFields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px">
       <h3 style="margin-bottom:10px;font-size:13px;color:var(--teal)">外部会议邀请管理</h3>
@@ -371,6 +401,8 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
     <div class="form-group"><label>会议/系列名称 *</label><input type="text" id="pmName" placeholder="例：治痛梦工坊（系列名，不含期数）"></div>
     <div class="form-group"><label>计划场次 *</label><input type="number" id="pmSessions" value="1" min="1" max="50"><div class="hint">1=单场会议；>1=系列会议（如3场）</div></div>
     <div class="form-group"><label>形式</label><select id="pmForm"><option value="不限">不限</option><option value="线下">线下</option><option value="线上">线上</option></select></div>
+    <div class="form-group"><label>负责DM</label><select id="pmDm"><option value="">请选择</option><option value="何方禹">苏南 - 何方禹</option><option value="孟鈃">南1 - 孟鈃</option><option value="郑家成">南2 - 郑家成</option><option value="李路">济南 - 李路</option><option value="张鑫">青岛 - 张鑫</option><option value="卜先峰">安徽 - 卜先峰</option></select></div>
+    <div class="form-group"><label>策略</label><select id="pmStrategy"><option value="">未分类</option><option value="基投">基投</option><option value="增投">增投</option><option value="竞投">竞投</option></select></div>
     <div class="form-group"><label>计划来源</label><select id="pmSource"><option value="年度会议计划">年度会议计划</option><option value="季度规划">季度规划</option><option value="月度计划">月度计划</option><option value="临时新增">临时新增</option><option value="区域规划">区域规划</option><option value="总部下达">总部下达</option></select></div>
     <div class="form-group"><label>备注</label><input type="text" id="pmNote" placeholder="可填额外说明"></div>
     <input type="hidden" id="pmEditId">
@@ -459,6 +491,7 @@ const STORAGE_KEY = 'meeting_progress_data_v3';
 let state = {meetings:[], plannedMeetings:[]};
 let passwordVerified = false;
 let meetingFilter = '';
+let strategyFilter = '';
 let calendarMonth = new Date();
 let calendarDMFilter = '';
 
@@ -569,7 +602,14 @@ function normalizeState(s){
     if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}
     if(!m.endDate)m.endDate=m.startDate;
     if(!m.date)m.date=m.startDate;
+    if(!m.strategy)m.strategy='';
   });
+  if(s.plannedMeetings){
+    s.plannedMeetings.forEach(pm=>{
+      if(!pm.strategy)pm.strategy='';
+      if(!pm.dm)pm.dm='';
+    });
+  }
   return s;
 }
 
@@ -859,6 +899,7 @@ function refreshAll(){
   if(activeTab){
     if(activeTab.dataset.tab==='gantt')renderGantt();
     if(activeTab.dataset.tab==='calendar')renderCalendar();
+    if(activeTab.dataset.tab==='strategy')renderStrategy();
   }
 }
 
@@ -880,8 +921,16 @@ function renderMeetingList(){
   if(meetingFilter){
     meetings=meetings.filter(x=>x.m.status===meetingFilter);
   }
+  // Filter by strategy
+  if(strategyFilter){
+    if(strategyFilter==='未分类'){
+      meetings=meetings.filter(x=>!x.m.strategy);
+    }else{
+      meetings=meetings.filter(x=>x.m.strategy===strategyFilter);
+    }
+  }
   if(!meetings.length){
-    el.innerHTML='<div class="empty-state"><p style="font-size:12px;color:var(--text3)">无「'+meetingFilter+'」状态的会议</p></div>';
+    el.innerHTML='<div class="empty-state"><p style="font-size:12px;color:var(--text3)">无匹配条件的会议</p></div>';
     return;
   }
   el.innerHTML=meetings.map(x=>{
@@ -890,16 +939,19 @@ function renderMeetingList(){
     const overdue=countOverdue(m);
     const typeTag=m.type==='线下'?'tag-offline':m.type==='线上'?'tag-online':'tag-external';
     const statusTag=m.status==='已完成'?'tag-done':m.status==='进行中'?'tag-ongoing':'tag-planning';
+    const strategyTag=m.strategy?`tag-strategy-${m.strategy}`:'tag-strategy-none';
+    const strategyLabel=m.strategy||'未分类';
     const pm=matchPlannedMeeting(m.name);
     return `<div class="meeting-card${m._active?' active':''}" data-idx="${i}" onclick="selectMeeting(${i})">
       ${overdue>0?`<span class="badge-warn">${overdue}项逾期</span>`:(pm?`<span class="badge-link">🔗${es(pm.name)}</span>`:'')}
-      <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
         <span class="name">${es(m.name)}</span>
         <span class="tag ${typeTag}">${m.type}</span>
       </div>
       <div class="meta-row">
         <span>${m.dm||'-'}</span><span>${m.city||'-'}</span><span>${fmtDateRange(m)}</span>
         <span class="tag ${statusTag}">${m.status}</span>
+        <span class="tag ${strategyTag}">${strategyLabel}</span>
       </div>
       ${m.type==='外部会议'&&m.extData?`<div style="font-size:10px;color:var(--teal);margin-top:2px">名额${getExtTotalQuota(m)} · 已邀${getExtTotalInvited(m)}</div>`:''}
       <div class="progress-mini"><div class="progress-mini-fill" style="width:${p.pct}%"></div></div>
@@ -915,6 +967,14 @@ function setFilter(f){
   meetingFilter=f;
   document.querySelectorAll('.meeting-filter .fbtn').forEach(b=>{
     b.classList.toggle('active',b.textContent===f||(f===''&&b.textContent==='全部'));
+  });
+  renderMeetingList();
+}
+function setStrategyFilter(f){
+  strategyFilter=f;
+  document.querySelectorAll('.strategy-filter .fbtn').forEach(b=>{
+    const active = (f===''&&b.textContent==='全部策略') || b.textContent===f;
+    b.classList.toggle('active',active);
   });
   renderMeetingList();
 }
@@ -1160,6 +1220,8 @@ function openPlannedModal(idx){
     document.getElementById('pmName').value=pm.name;
     document.getElementById('pmSessions').value=pm.totalSessions;
     document.getElementById('pmForm').value=pm.form||'不限';
+    document.getElementById('pmDm').value=pm.dm||'';
+    document.getElementById('pmStrategy').value=pm.strategy||'';
     document.getElementById('pmSource').value=pm.source||'年度会议计划';
     document.getElementById('pmNote').value=pm.note||'';
   }else{
@@ -1168,6 +1230,8 @@ function openPlannedModal(idx){
     document.getElementById('pmName').value='';
     document.getElementById('pmSessions').value='1';
     document.getElementById('pmForm').value='不限';
+    document.getElementById('pmDm').value='';
+    document.getElementById('pmStrategy').value='';
     document.getElementById('pmSource').value='年度会议计划';
     document.getElementById('pmNote').value='';
   }
@@ -1180,7 +1244,7 @@ function savePlannedMeeting(){
   if(!name){alert('请填写会议/系列名称');return}
   if(sessions<1){alert('计划场次至少为1');return}
   const editId=document.getElementById('pmEditId').value;
-  const data={name,totalSessions:sessions,form:document.getElementById('pmForm').value,source:document.getElementById('pmSource').value,note:document.getElementById('pmNote').value.trim()};
+  const data={name,totalSessions:sessions,form:document.getElementById('pmForm').value,dm:document.getElementById('pmDm').value,strategy:document.getElementById('pmStrategy').value,source:document.getElementById('pmSource').value,note:document.getElementById('pmNote').value.trim()};
   if(editId!==''){
     data.id=state.plannedMeetings[parseInt(editId)].id;
     state.plannedMeetings[parseInt(editId)]=data;
@@ -1452,6 +1516,77 @@ function renderSummary(){
   document.getElementById('summaryContent').innerHTML=html;
 }
 
+// ============ 策略模块 ============
+function selectMeetingByUid(uid){
+  const idx=state.meetings.findIndex(m=>m.uid===uid);
+  if(idx>=0) selectMeeting(idx);
+}
+function renderStrategy(){
+  const el=document.getElementById('strategyContent');
+  if(!state.meetings.length && !state.plannedMeetings.length){
+    el.innerHTML='<div class="strategy-empty">暂无会议数据</div>';
+    return;
+  }
+  const cats=['基投','增投','竞投','未分类'];
+  const byCat={}; cats.forEach(c=>byCat[c]=[]);
+  state.meetings.forEach(m=>{
+    const cat=m.strategy||'未分类';
+    byCat[cat].push({kind:'meeting', item:m, date:m.date||m.startDate||'', dm:m.dm||''});
+  });
+  (state.plannedMeetings||[]).forEach(pm=>{
+    const cat=pm.strategy||'未分类';
+    byCat[cat].push({kind:'planned', item:pm, date:'', dm:pm.dm||''});
+  });
+  cats.forEach(c=>{
+    byCat[c].sort((a,b)=>{
+      if(a.kind==='planned' && b.kind!=='planned') return 1;
+      if(b.kind==='planned' && a.kind!=='planned') return -1;
+      if(a.date && b.date) return a.date.localeCompare(b.date);
+      return 0;
+    });
+  });
+  let html='';
+  cats.forEach(cat=>{
+    const list=byCat[cat];
+    if(!list.length) return;
+    html+=`<div class="strategy-section">`;
+    html+=`<div class="strategy-title"><span class="tag tag-strategy-${cat==='未分类'?'none':cat}">${cat}</span><span style="color:var(--text3);font-size:12px">${list.length}场</span></div>`;
+    html+=`<table class="strategy-table"><thead><tr><th>负责DM</th><th>会议</th><th>时间</th><th>会议有效性</th></tr></thead><tbody>`;
+    list.forEach(row=>{
+      const isPlanned=row.kind==='planned';
+      const m=row.item;
+      const name=es(m.name);
+      const time=isPlanned?'待定':(row.date||'-');
+      let effHtml='';
+      if(isPlanned){
+        effHtml='<span style="color:var(--text3)">—</span>';
+      }else{
+        const entry=effEntryForMeeting(m.uid);
+        if(entry && entry.attendees && entry.attendees.length){
+          const metrics=effComputeSummary(entry);
+          effHtml=effSummaryBar(metrics);
+        }else if(entry){
+          effHtml='<span style="color:var(--text3);font-size:12px">尚未录入参会客户</span>';
+        }else{
+          effHtml='<span style="color:var(--text3);font-size:12px">未完成或未同步至会议有效性</span>';
+        }
+      }
+      html+=`<tr>
+        <td>${es(row.dm)||'-'}</td>
+        <td class="st-name" onclick="${isPlanned?`switchTab('planned')`:`selectMeetingByUid('${m.uid}')`}">${name}</td>
+        <td class="st-time">${time}</td>
+        <td class="st-eff">${effHtml}</td>
+      </tr>`;
+    });
+    html+='</tbody></table></div>';
+  });
+  if(!html){
+    el.innerHTML='<div class="strategy-empty">暂无带策略标签的会议</div>';
+    return;
+  }
+  el.innerHTML=html;
+}
+
 // ============ 会议有效性分析 (Meeting Effectiveness) ============
 // 口径: 不分角色，活动覆盖表中该会议列出的全部参会客户
 // 会前周均 = 会前28天纯销合计/4；会后周均 = 会后28天纯销合计/4
@@ -1619,6 +1754,39 @@ function effArrow(v, pre){
   const a = v > pre ? '▲' : v < pre ? '▼' : '→';
   return '<span style="color:'+effNumColor(v,pre)+';margin-left:3px">'+a+'</span>';
 }
+// 计算会议有效性汇总指标（复用于会议有效性模块与策略模块）
+function effComputeSummary(item){
+  const a = effAnalyze(item.date, item.attendees || []);
+  const matched = a.rows.filter(r=>r.matched);
+  const avW = a.weeks.filter(x=>x.available);
+  const missW = a.weeks.filter(x=>x.elapsed && !x.covered);
+  const totPre = matched.reduce((s,r)=>s+r.pre,0);
+  const wkTotals = [1,2,3,4].map(n=>a.weeks[n-1].available ? Math.round(matched.reduce((s,r)=>s+(r.w[n]||0),0)*10)/10 : null);
+  const avVals = wkTotals.filter(v=>v!=null);
+  const avgPost = avVals.length ? avVals.reduce((s,v)=>s+v,0)/avVals.length : null;
+  const delta = avgPost!=null && totPre>0 ? Math.round((avgPost-totPre)/totPre*100) : null;
+  return {a, matched, avW, missW, totPre, wkTotals, avgPost, delta, total:(item.attendees||[]).length};
+}
+// 会议有效性汇总条 HTML（紧凑样式）
+function effSummaryBar(metrics){
+  const {matched, avW, missW, totPre, wkTotals, delta, total} = metrics;
+  let html = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text2);padding:8px 12px;background:var(--bg);border-radius:6px;align-items:center;margin-bottom:10px">';
+  html += '<span>可匹配 <b>'+matched.length+'/'+total+'</b></span>';
+  html += '<span>群体会前周均 <b>'+effFmt(totPre)+'</b> 盒/周</span>';
+  if(avW.length === 4){
+    const totPost = Math.round(avW.reduce((s,x)=>s+wkTotals[x.n-1],0)/4*10)/10;
+    html += '<span>群体会后周均 <b style="color:'+effNumColor(totPost, totPre)+'">'+effFmt(totPost)+'</b>'+effArrow(totPost, totPre)+' 盒/周</span>';
+  }
+  avW.forEach(x=>{ html += '<span>W'+x.n+' <b>'+effFmt(wkTotals[x.n-1])+'</b></span>'; });
+  if(delta !== null) html += '<span>均变 <b style="color:'+(delta>0?'#188038':delta<0?'#d93025':'var(--amber)')+'">'+(delta>0?'+':'')+delta+'%</b></span>';
+  html += '</div>';
+  return html;
+}
+// 根据会议 uid 查找对应的会议有效性 entry
+function effEntryForMeeting(uid){
+  ensureEffData();
+  return (state.effectiveness.entries||[]).find(e=>e.meetingUid === uid);
+}
 // 迷你趋势线: 5点[会前周均,W1..W4], null跳过
 function effSpark(pre, w){
   const vals = [pre, w[1], w[2], w[3], w[4]];
@@ -1702,16 +1870,8 @@ function renderEff(){
     html += '<div class="empty-state"><p>暂无已完成会议的跟进</p><p style="font-size:12px;color:var(--text3)">会议在看板中标记「已完成」后自动出现在这里</p></div>';
   }
   list.forEach(item=>{
-    const a = effAnalyze(item.date, item.attendees || []);
-    const matched = a.rows.filter(r=>r.matched);
-    const avW = a.weeks.filter(x=>x.available);
-    const missW = a.weeks.filter(x=>x.elapsed && !x.covered);
-    // 群体汇总
-    const totPre = matched.reduce((s,r)=>s+r.pre,0);
-    const wkTotals = [1,2,3,4].map(n=>a.weeks[n-1].available ? Math.round(matched.reduce((s,r)=>s+(r.w[n]||0),0)*10)/10 : null);
-    const avVals = wkTotals.filter(v=>v!=null);
-    const avgPost = avVals.length ? avVals.reduce((s,v)=>s+v,0)/avVals.length : null;
-    const delta = avgPost!=null && totPre>0 ? Math.round((avgPost-totPre)/totPre*100) : null;
+    const metrics = effComputeSummary(item);
+    const {a, matched, avW, missW, totPre, wkTotals, delta} = metrics;
     const srcBadge = item.auto ? '<span class="tag tag-done" style="font-size:10px">看板同步</span>'
       : (item.source ? '<span class="tag" style="font-size:10px;background:var(--bg);color:var(--text2)">预置</span>'
       : '<span class="tag" style="font-size:10px;background:var(--bg);color:var(--text2)">手动</span>');
@@ -1758,16 +1918,7 @@ function renderEff(){
       html += '<button class="btn" onclick="effAddCust(\''+item.id+'\')">添加并分析</button></div>';
     }else{
       // 汇总条
-      html += '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text2);margin-bottom:10px;padding:8px 12px;background:var(--bg);border-radius:6px">';
-      html += '<span>可匹配 <b>'+matched.length+'/'+(item.attendees||[]).length+'</b></span>';
-      html += '<span>群体会前周均 <b>'+effFmt(totPre)+'</b> 盒/周</span>';
-      if(avW.length === 4){
-        const totPost = Math.round(avW.reduce((s,x)=>s+wkTotals[x.n-1],0)/4*10)/10;
-        html += '<span>群体会后周均 <b style="color:'+effNumColor(totPost, totPre)+'">'+effFmt(totPost)+'</b>'+effArrow(totPost, totPre)+' 盒/周</span>';
-      }
-      avW.forEach(x=>{ html += '<span>W'+x.n+' <b>'+effFmt(wkTotals[x.n-1])+'</b></span>'; });
-      if(delta !== null) html += '<span>均变 <b style="color:'+(delta>0?'#188038':delta<0?'#d93025':'var(--amber)')+'">'+(delta>0?'+':'')+delta+'%</b></span>';
-      html += '</div>';
+      html += effSummaryBar(metrics);
       if(missW.length){
         html += '<div style="font-size:11px;color:var(--amber);margin-bottom:8px">⚠️ W'+missW.map(x=>x.n).join('/W')+' 已过但销量数据未覆盖（数据截至 '+effDateFromIdx(info.end)+'），请「🔄 刷新销量数据」上传最新患者画像表</div>';
       }
@@ -2125,6 +2276,7 @@ function switchTab(tabName){
   document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
   document.getElementById('tab-'+tabName).classList.add('active');
   if(tabName==='summary')renderSummary();
+  if(tabName==='strategy')renderStrategy();
   if(tabName==='gantt')renderGantt();
   if(tabName==='calendar')renderCalendar();
   if(tabName==='planned')renderPlannedMeetings();
@@ -2147,6 +2299,7 @@ function openModal(idx){
     document.getElementById('meetingCity').value=m.city||'';
     document.getElementById('meetingDirector').value=m.director||'';
     document.getElementById('meetingStatus').value=m.status||'筹备中';
+    document.getElementById('meetingStrategy').value=m.strategy||'';
     document.getElementById('meetingNotes').value=m.notes||'';
     const ext=m.extData||{};
     editingExtData=ext;
@@ -2164,6 +2317,7 @@ function openModal(idx){
     document.getElementById('meetingCity').value='';
     document.getElementById('meetingDirector').value='';
     document.getElementById('meetingStatus').value='筹备中';
+    document.getElementById('meetingStrategy').value='';
     document.getElementById('meetingNotes').value='';
     editingExtData={};
     document.getElementById('extInviteDl').value='';
@@ -2214,7 +2368,7 @@ function saveMeeting(){
   if(!name||!startDate){alert('请填写会议名称和开始日期');return}
   const editId=document.getElementById('editId').value;
   const type=document.getElementById('meetingType').value;
-  let data={name,startDate,endDate,date:startDate,type,dm:document.getElementById('meetingDm').value,city:document.getElementById('meetingCity').value.trim(),director:document.getElementById('meetingDirector').value.trim(),status:document.getElementById('meetingStatus').value,notes:document.getElementById('meetingNotes').value.trim(),progress:{}};
+  let data={name,startDate,endDate,date:startDate,type,dm:document.getElementById('meetingDm').value,city:document.getElementById('meetingCity').value.trim(),director:document.getElementById('meetingDirector').value.trim(),status:document.getElementById('meetingStatus').value,strategy:document.getElementById('meetingStrategy').value,notes:document.getElementById('meetingNotes').value.trim(),progress:{}};
   if(type==='外部会议'){
     const dmQ={},dmI={};
     DM_QUOTA_LIST.forEach(d=>{
