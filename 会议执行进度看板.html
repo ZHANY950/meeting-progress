@@ -252,6 +252,13 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
 .cal-cell.today{background:var(--blue-bg)}
 .cal-cell .cal-day{font-size:12px;color:var(--text2);font-weight:500;text-align:right}
 .cal-cell.today .cal-day{color:var(--blue);font-weight:700}
+.cal-cell.holiday{background:#fff4ec}
+.cal-cell.holiday .cal-day{color:#d93025;font-weight:600}
+.cal-cell.workday{background:#eaf3ff}
+.cal-cell.workday .cal-day{color:#1a73e8;font-weight:600}
+.cal-cell.weekend .cal-day{color:var(--text3)}
+.cal-holiday-badge{display:inline-block;margin-left:4px;font-size:10px;background:#d93025;color:#fff;border-radius:3px;padding:0 4px;font-weight:500;vertical-align:middle}
+.cal-workday-badge{display:inline-block;margin-left:4px;font-size:10px;background:#1a73e8;color:#fff;border-radius:3px;padding:0 4px;font-weight:500;vertical-align:middle}
 .cal-meeting{font-size:10px;padding:2px 5px;border-radius:4px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s}
 .cal-meeting:hover{opacity:.85;transform:translateX(2px)}
 .cal-meeting.offline{background:var(--purple-bg);color:var(--purple)}
@@ -513,6 +520,25 @@ let state = {meetings:[], plannedMeetings:[]};
 let passwordVerified = false;
 let meetingFilter = '';
 let strategyFilter = '';
+// ============ 中国法定节假日 (2026) ============
+// 数据源: 国务院办公厅《关于2026年部分节假日安排的通知》(2025-11-04)
+const HOLIDAYS_2026 = {
+  '2026-01-01':'元旦','2026-01-02':'元旦','2026-01-03':'元旦',
+  '2026-02-15':'春节','2026-02-16':'春节','2026-02-17':'春节','2026-02-18':'春节','2026-02-19':'春节','2026-02-20':'春节','2026-02-21':'春节','2026-02-22':'春节','2026-02-23':'春节',
+  '2026-04-04':'清明','2026-04-05':'清明','2026-04-06':'清明',
+  '2026-05-01':'劳动节','2026-05-02':'劳动节','2026-05-03':'劳动节','2026-05-04':'劳动节','2026-05-05':'劳动节',
+  '2026-06-19':'端午','2026-06-20':'端午','2026-06-21':'端午',
+  '2026-09-25':'中秋','2026-09-26':'中秋','2026-09-27':'中秋',
+  '2026-10-01':'国庆','2026-10-02':'国庆','2026-10-03':'国庆','2026-10-04':'国庆','2026-10-05':'国庆','2026-10-06':'国庆','2026-10-07':'国庆'
+};
+const WORKDAYS_2026 = {
+  '2026-01-04':'元旦调休',
+  '2026-02-14':'春节调休',
+  '2026-02-28':'春节调休',
+  '2026-05-09':'劳动节调休',
+  '2026-09-20':'国庆调休',
+  '2026-10-10':'国庆调休'
+};
 let calendarMonth = new Date();
 let calendarDMFilter = '';
 
@@ -1391,8 +1417,12 @@ function renderCalendar(){
     const dateStr=year+'-'+String(month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
     const isToday=dateStr===today;
     const dayMeetings=byDate[day]||[];
-    let cellCls='cal-cell'+(isToday?' today':'');
-    html+=`<div class="${cellCls}"><div class="cal-day">${day}</div>`;
+    const holidayName=HOLIDAYS_2026[dateStr]||'';
+    const workdayName=WORKDAYS_2026[dateStr]||'';
+    const dow=new Date(year,month,day).getDay();
+    const isWeekend=dow===0||dow===6;
+    let cellCls='cal-cell'+(isToday?' today':'')+(holidayName?' holiday':'')+(workdayName?' workday':'')+(isWeekend?' weekend':'');
+    html+=`<div class="${cellCls}"><div class="cal-day">${day}${holidayName?`<span class="cal-holiday-badge" title="${holidayName}">${holidayName}</span>`:''}${workdayName?`<span class="cal-workday-badge" title="${workdayName}">班</span>`:''}</div>`;
     dayMeetings.forEach(m=>{
       const cls=m.type==='线下'?'offline':m.type==='线上'?'online':'external';
       const doneCls=m.status==='已完成'?' done':'';
@@ -1414,6 +1444,8 @@ function renderCalendar(){
   html+='<span><span class="dot" style="background:var(--purple-bg);border:1px solid var(--purple)"></span>线下</span>';
   html+='<span><span class="dot" style="background:var(--blue-bg);border:1px solid var(--blue)"></span>线上</span>';
   html+='<span><span class="dot" style="background:var(--teal-bg);border:1px solid var(--teal)"></span>外部</span>';
+  html+='<span><span class="cal-holiday-badge">法定节假日</span></span>';
+  html+='<span><span class="cal-workday-badge">班</span> 调休工作日</span>';
   html+='<span style="color:var(--text3)">点击日历中的会议可跳转到SOP进度看板</span>';
   html+='</div>';
 
