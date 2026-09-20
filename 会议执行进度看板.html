@@ -184,6 +184,25 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
 .tag-strategy-增投{background:var(--purple-bg);color:var(--purple)}
 .tag-strategy-竞投{background:var(--orange-bg);color:var(--orange)}
 .tag-strategy-none{background:#eee;color:var(--text3)}
+/* 策略标签: 按固定顺序取色(兼容长名称/特殊字符, 不再依赖中文类名) */
+.tag.st-c0,.tag.mech-c0{background:#eee;color:var(--text3)}
+.tag.st-c1{background:var(--blue-bg);color:var(--blue)}
+.tag.st-c2{background:var(--teal-bg);color:var(--teal)}
+.tag.st-c3{background:var(--purple-bg);color:var(--purple)}
+.tag.st-c4{background:var(--green-bg);color:var(--green)}
+.tag.st-c5{background:var(--orange-bg);color:var(--orange)}
+.tag.st-c6{background:var(--amber-bg);color:var(--amber)}
+.tag.st-c7{background:var(--red-bg);color:var(--red)}
+.tag.st-c8{background:#fff9e6;color:#7a5c00}
+/* 机制标签: 未分类/基投/增投/竞投/医学部 */
+.tag.mech-c1{background:var(--blue-bg);color:var(--blue)}
+.tag.mech-c2{background:var(--purple-bg);color:var(--purple)}
+.tag.mech-c3{background:var(--orange-bg);color:var(--orange)}
+.tag.mech-c4{background:var(--teal-bg);color:var(--teal)}
+.tag.st-wrap{white-space:normal;word-break:break-word;line-height:1.35}
+.strategy-filter select{width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text2);font-size:11px;font-family:var(--font);cursor:pointer}
+.strategy-filter select:focus{outline:none;border-color:var(--blue);color:var(--blue)}
+.strategy-table td.st-name{white-space:normal;word-break:break-word;max-width:320px}
 .strategy-filter{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .strategy-filter .fbtn{font-size:11px;padding:3px 10px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
 .strategy-filter .fbtn:hover{border-color:var(--blue);color:var(--blue)}
@@ -301,11 +320,18 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
       <button class="fbtn" onclick="setFilter('待开展')">待开展</button>
     </div>
     <div class="strategy-filter" id="strategyFilter" data-page-node-id="WSv8fLIjyrZJ7Wcab7waWG">
-      <button class="fbtn active" onclick="setStrategyFilter('')" data-page-node-id="XWPIYq3G7xqxGFUwJ9ZWdH">全部策略</button>
-      <button class="fbtn" onclick="setStrategyFilter('基投')" data-page-node-id="RUP2JxlusDNg2xoNrBPAx3">基投</button>
-      <button class="fbtn" onclick="setStrategyFilter('增投')" data-page-node-id="oXrkbEiNkrDaFSCQhwDXsk">增投</button>
-      <button class="fbtn" onclick="setStrategyFilter('竞投')" data-page-node-id="J8srUZqkdGO2fDWVsgi7sA">竞投</button>
-      <button class="fbtn" onclick="setStrategyFilter('未分类')" data-page-node-id="rMSB571FbbLWN68EA8iDaM">未分类</button>
+      <select id="strategyFilterSel" onchange="setStrategyFilter(this.value)" title="按策略筛选会议" data-page-node-id="XWPIYq3G7xqxGFUwJ9ZWdH">
+        <option value="">全部策略</option>
+        <option value="基投">基投</option>
+        <option value="安徽头痛头晕培育">安徽头痛头晕培育</option>
+        <option value="AC培育江苏扩圈鲁皖&amp;AC中青年圈子">AC培育江苏扩圈鲁皖&amp;AC中青年圈子</option>
+        <option value="立足青岛山东C中青年圈">立足青岛山东C中青年圈</option>
+        <option value="特定BD圈子">特定BD圈子</option>
+        <option value="准入">准入</option>
+        <option value="中央/区域资源">中央/区域资源</option>
+        <option value="特殊需求">特殊需求</option>
+        <option value="__NONE__">未分类</option>
+      </select>
     </div>
     <div class="meeting-list" id="meetingList" data-page-node-id="vMuPUkcKIDjfsWLACUhL5i"></div>
     <div class="sidebar-footer" data-page-node-id="tIlgkpx1NvNVUX4rQdDHJN">
@@ -390,7 +416,26 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
     <div class="form-group" data-page-node-id="5HvGAvC34jzDen2UWjTeMJ"><label data-page-node-id="yovZuHjl67XPtCPo5XgkoV">城市</label><input type="text" id="meetingCity" placeholder="例：苏州" data-page-node-id="7TGt9w9Bi4iwUURCnpeSJL"></div>
     <div class="form-group" data-page-node-id="jrMYB3I6BRCKHojwhP39TC"><label data-page-node-id="N6nz81hgSVhUD1crNbIocD">会议总监</label><input type="text" id="meetingDirector" placeholder="例：张云" data-page-node-id="M4yx9VHyNi1JMcONfLgptr"></div>
     <div class="form-group" data-page-node-id="FGQVnj9jh5PEv27tJqBXdi"><label data-page-node-id="VqDGVbNTEShBYMlhPsnr9O">状态</label><select id="meetingStatus" onchange="toggleMeetingStatusFields()" data-page-node-id="L8m8HiL8RVI9AmdQuksNBA"><option value="筹备中" data-page-node-id="PaeT8lIq4C0WrNKdF9jqNQ">筹备中</option><option value="进行中" data-page-node-id="f1ISfrUF8bHrr0xIKhkQkl">进行中</option><option value="已完成" data-page-node-id="jPlW24xYwzv7GaZO51wDux">已完成</option><option value="待开展">待开展</option></select></div>
-    <div class="form-group" data-page-node-id="xAc9I01xdaUvGppXaM1q7O"><label data-page-node-id="R0jdUXucWOoe4iFSxO7pzd">策略</label><select id="meetingStrategy" data-page-node-id="GazabsDBVkGUoCknwQnNvj"><option value="" data-page-node-id="Xlu3k4me8DJYFg6RpwiEDx">未分类</option><option value="基投" data-page-node-id="D7gqOs1miEYhlH9TUrui0H">基投</option><option value="增投" data-page-node-id="91XyGp48LNyDHY9rHH8LZa">增投</option><option value="竞投" data-page-node-id="EmTRUUWYbKkKF468NmE2C2">竞投</option></select></div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:2;min-width:0"><label>策略</label><select id="meetingStrategy">
+        <option value="">未分类</option>
+        <option value="基投">基投</option>
+        <option value="安徽头痛头晕培育">安徽头痛头晕培育</option>
+        <option value="AC培育江苏扩圈鲁皖&amp;AC中青年圈子">AC培育江苏扩圈鲁皖&amp;AC中青年圈子</option>
+        <option value="立足青岛山东C中青年圈">立足青岛山东C中青年圈</option>
+        <option value="特定BD圈子">特定BD圈子</option>
+        <option value="准入">准入</option>
+        <option value="中央/区域资源">中央/区域资源</option>
+        <option value="特殊需求">特殊需求</option>
+      </select></div>
+      <div class="form-group" style="flex:1;min-width:0"><label>机制</label><select id="meetingMechanism">
+        <option value="">未分类</option>
+        <option value="基投">基投</option>
+        <option value="增投">增投</option>
+        <option value="竞投">竞投</option>
+        <option value="医学部">医学部</option>
+      </select></div>
+    </div>
     <div class="form-group" data-page-node-id="LVs2VUAJLHunIjHf0rotUc"><label data-page-node-id="AUEnruPH7AqnNeUYyxQIZS">备注</label><input type="text" id="meetingNotes" placeholder="可填额外说明" data-page-node-id="XwSliN8DIc9ng3dhGnUvnH"></div>
     <div id="externalFields" style="display:none;border-top:1px solid var(--border);padding-top:12px;margin-top:4px" data-page-node-id="4Gr70h4xhwYH4gD334tTVs">
       <h3 style="margin-bottom:10px;font-size:13px;color:var(--teal)" data-page-node-id="j8ELfcR6u7ulVHrxYftJtA">外部会议邀请管理</h3>
@@ -430,7 +475,26 @@ h2{font-size:15px;font-weight:500}h3{font-size:14px;font-weight:500}
     <div class="form-group" data-page-node-id="b35p6EixwpntHLCFKCZl10"><label data-page-node-id="jKg9FOSdeoo1J538yJEyW3">计划场次 *</label><input type="number" id="pmSessions" value="1" min="1" max="50" data-page-node-id="2smhPGSO3HO6Aq9ikQILeS"><div class="hint" data-page-node-id="r5fVNAKQAOEHhZLP01kSrG">1=单场会议；>1=系列会议（如3场）</div></div>
     <div class="form-group" data-page-node-id="cIpPOY7lu40YwxBLvGXwoz"><label data-page-node-id="OYy7hHi3XxH14Q1omt0YFQ">形式</label><select id="pmForm" data-page-node-id="YZFNryryDHdLtkBgQg86PK"><option value="不限" data-page-node-id="AogXQNuLChNoGBZVR80zsy">不限</option><option value="线下" data-page-node-id="7vt0z8Ndp90QIsmwz6LacJ">线下</option><option value="线上" data-page-node-id="UGMbbW8QsafXlxcVzqNNNX">线上</option></select></div>
     <div class="form-group" data-page-node-id="dIy2ewy93zbUCDrNbaGntk"><label data-page-node-id="GpNcnmxLbSiKOvplPJTpJC">负责DM</label><select id="pmDm" data-page-node-id="FL1KuBTgGVaKFitFHJBIoB"><option value="" data-page-node-id="7cmvGP1CzuYYcPzRaE2zsq">请选择</option><option value="何方禹" data-page-node-id="aQ5Br2blA68EVj1G37Ob9w">苏南 - 何方禹</option><option value="孟鈃" data-page-node-id="xDgB2zDBLFhdzQj7DQ1AsT">南1 - 孟鈃</option><option value="郑家成" data-page-node-id="zTFsrhJybHOasBWg92R45g">南2 - 郑家成</option><option value="李路" data-page-node-id="YTjJQV19ozQTeNoG1b2UpQ">济南 - 李路</option><option value="青岛" data-page-node-id="vZlCADlZkAWGuu2pBStMpm">青岛</option><option value="卜先峰" data-page-node-id="cgq66UIZf5ysUzkLiAJ0vv">安徽 - 卜先峰</option></select></div>
-    <div class="form-group" data-page-node-id="J6aHX4rGmb0HJmcajP8aD6"><label data-page-node-id="LDlHTxtI69gghR6vOiJqRA">策略</label><select id="pmStrategy" data-page-node-id="ApWH7BbEEV8orPuMKRuRvq"><option value="" data-page-node-id="hyiwwjzmxcEnsoKiZ3RgKr">未分类</option><option value="基投" data-page-node-id="r2ut64eRFOoNNlYRGp2f4Z">基投</option><option value="增投" data-page-node-id="c7hcinRsg7rG1JFieBmYRm">增投</option><option value="竞投" data-page-node-id="I9l3TQK2RCitEHkMA5waWO">竞投</option></select></div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:2;min-width:0"><label>策略</label><select id="pmStrategy">
+        <option value="">未分类</option>
+        <option value="基投">基投</option>
+        <option value="安徽头痛头晕培育">安徽头痛头晕培育</option>
+        <option value="AC培育江苏扩圈鲁皖&amp;AC中青年圈子">AC培育江苏扩圈鲁皖&amp;AC中青年圈子</option>
+        <option value="立足青岛山东C中青年圈">立足青岛山东C中青年圈</option>
+        <option value="特定BD圈子">特定BD圈子</option>
+        <option value="准入">准入</option>
+        <option value="中央/区域资源">中央/区域资源</option>
+        <option value="特殊需求">特殊需求</option>
+      </select></div>
+      <div class="form-group" style="flex:1;min-width:0"><label>机制</label><select id="pmMechanism">
+        <option value="">未分类</option>
+        <option value="基投">基投</option>
+        <option value="增投">增投</option>
+        <option value="竞投">竞投</option>
+        <option value="医学部">医学部</option>
+      </select></div>
+    </div>
     <div class="form-group" data-page-node-id="X1YpVGoAcixA8HGyJo8Bld"><label data-page-node-id="d695gsVkqr6MaJLz45hDOw">计划来源</label><select id="pmSource" data-page-node-id="hbBoOyOiSf2UBKeXNtwDDs"><option value="年度会议计划" data-page-node-id="ciOErWq8q9cGGNsqBprhoT">年度会议计划</option><option value="季度规划" data-page-node-id="pkGPOQKhIJh3w7PJUYr6Wl">季度规划</option><option value="月度计划" data-page-node-id="E1qTNPEWknevTUgOidWdtk">月度计划</option><option value="临时新增" data-page-node-id="8j5GFh70jzHoDLAG8HGQpl">临时新增</option><option value="区域规划" data-page-node-id="CTNFfEKO7O4X7D7D7BdXAn">区域规划</option><option value="总部下达" data-page-node-id="UrZazSi4u71WAd763PyKRe">总部下达</option></select></div>
     <div class="form-group" data-page-node-id="aeZdvYNJQHL31TK1fLDUcq"><label data-page-node-id="sBYIUwt2GzgNlSVkvCOjAi">备注</label><input type="text" id="pmNote" placeholder="可填额外说明" data-page-node-id="CSFFBJu9XmVnAOOnn69sQh"></div>
     <input type="hidden" id="pmEditId" data-page-node-id="BAnkwpPhBJnkM5BwUtPrR3">
@@ -520,6 +584,12 @@ let state = {meetings:[], plannedMeetings:[]};
 let passwordVerified = false;
 let meetingFilter = '';
 let strategyFilter = '';
+// ============ 策略 / 机制 固定字典 ============
+const STRATEGY_OPTIONS = ['','基投','安徽头痛头晕培育','AC培育江苏扩圈鲁皖&AC中青年圈子','立足青岛山东C中青年圈','特定BD圈子','准入','中央/区域资源','特殊需求'];
+const STRATEGY_NONEMPTY = STRATEGY_OPTIONS.filter(Boolean);   // 8 个非空策略, 固定顺序
+const MECHANISM_OPTIONS = ['','基投','增投','竞投','医学部'];
+function strategyIdx(v){const i=STRATEGY_OPTIONS.indexOf(v);return i<0?0:i}
+function mechanismIdx(v){const i=MECHANISM_OPTIONS.indexOf(v);return i<0?0:i}
 // ============ 中国法定节假日 (2026) ============
 // 数据源: 国务院办公厅《关于2026年部分节假日安排的通知》(2025-11-04)
 const HOLIDAYS_2026 = {
@@ -660,10 +730,31 @@ function normalizeState(s){
       });
     }
     if(!m.strategy)m.strategy='';
+    // 旧数据迁移(幂等, 仅执行一次): 增投/竞投 属机制而非策略 -> 搬入 mechanism, strategy 置空待人工选择
+    if(!m._smMig){
+      if(m.strategy==='增投'||m.strategy==='竞投'){
+        if(!m.mechanism)m.mechanism=m.strategy;
+        m.strategy='';
+      }else if(m.strategy==='基投'){
+        if(!m.mechanism)m.mechanism='基投';
+      }
+      m._smMig=1;
+    }
+    if(m.mechanism===undefined||m.mechanism===null)m.mechanism='';
   });
   if(s.plannedMeetings){
     s.plannedMeetings.forEach(pm=>{
       if(!pm.strategy)pm.strategy='';
+      if(!pm._smMig){
+        if(pm.strategy==='增投'||pm.strategy==='竞投'){
+          if(!pm.mechanism)pm.mechanism=pm.strategy;
+          pm.strategy='';
+        }else if(pm.strategy==='基投'){
+          if(!pm.mechanism)pm.mechanism='基投';
+        }
+        pm._smMig=1;
+      }
+      if(pm.mechanism===undefined||pm.mechanism===null)pm.mechanism='';
       if(!pm.dm)pm.dm='';
       if(pm.dm==='张鑫')pm.dm='青岛';
     });
@@ -986,7 +1077,7 @@ function renderMeetingList(){
   }
   // Filter by strategy
   if(strategyFilter){
-    if(strategyFilter==='未分类'){
+    if(strategyFilter==='__NONE__'||strategyFilter==='未分类'){
       meetings=meetings.filter(x=>!x.m.strategy);
     }else{
       meetings=meetings.filter(x=>x.m.strategy===strategyFilter);
@@ -1002,8 +1093,9 @@ function renderMeetingList(){
     const overdue=countOverdue(m);
     const typeTag=m.type==='线下'?'tag-offline':m.type==='线上'?'tag-online':'tag-external';
     const statusTag=m.status==='已完成'?'tag-done':m.status==='进行中'?'tag-ongoing':'tag-planning';
-    const strategyTag=m.strategy?`tag-strategy-${m.strategy}`:'tag-strategy-none';
+    const strategyTag='st-c'+strategyIdx(m.strategy);
     const strategyLabel=m.strategy||'未分类';
+    const mechTag='mech-c'+mechanismIdx(m.mechanism);
     const pm=matchPlannedMeeting(m.name);
     return `<div class="meeting-card${m._active?' active':''}" data-idx="${i}" onclick="selectMeeting(${i})">
       ${overdue>0?`<span class="badge-warn">${overdue}项逾期</span>`:(pm?`<span class="badge-link">🔗${es(pm.name)}</span>`:'')}
@@ -1014,7 +1106,8 @@ function renderMeetingList(){
       <div class="meta-row">
         <span>${fmtDm(m.dm)}</span><span>${m.city||'-'}</span><span>${fmtDateRange(m)}</span>
         <span class="tag ${statusTag}">${m.status}</span>
-        <span class="tag ${strategyTag}">${strategyLabel}</span>
+        <span class="tag ${strategyTag} st-wrap">${strategyLabel}</span>
+        ${m.mechanism?`<span class="tag ${mechTag}">${m.mechanism}</span>`:''}
       </div>
       ${m.type==='外部会议'&&m.extData?`<div style="font-size:10px;color:var(--teal);margin-top:2px">名额${getExtTotalQuota(m)} · 已邀${getExtTotalInvited(m)}</div>`:''}
       <div class="progress-mini"><div class="progress-mini-fill" style="width:${p.pct}%"></div></div>
@@ -1035,6 +1128,8 @@ function setFilter(f){
 }
 function setStrategyFilter(f){
   strategyFilter=f;
+  const sel=document.getElementById('strategyFilterSel');
+  if(sel)sel.value=f;
   document.querySelectorAll('.strategy-filter .fbtn').forEach(b=>{
     const active = (f===''&&b.textContent==='全部策略') || b.textContent===f;
     b.classList.toggle('active',active);
@@ -1310,6 +1405,7 @@ function openPlannedModal(idx){
     document.getElementById('pmForm').value=pm.form||'不限';
     document.getElementById('pmDm').value=pm.dm||'';
     document.getElementById('pmStrategy').value=pm.strategy||'';
+    document.getElementById('pmMechanism').value=pm.mechanism||'';
     document.getElementById('pmSource').value=pm.source||'年度会议计划';
     document.getElementById('pmNote').value=pm.note||'';
   }else{
@@ -1320,6 +1416,7 @@ function openPlannedModal(idx){
     document.getElementById('pmForm').value='不限';
     document.getElementById('pmDm').value='';
     document.getElementById('pmStrategy').value='';
+    document.getElementById('pmMechanism').value='';
     document.getElementById('pmSource').value='年度会议计划';
     document.getElementById('pmNote').value='';
   }
@@ -1332,9 +1429,10 @@ function savePlannedMeeting(){
   if(!name){alert('请填写会议/系列名称');return}
   if(sessions<1){alert('计划场次至少为1');return}
   const editId=document.getElementById('pmEditId').value;
-  const data={name,totalSessions:sessions,form:document.getElementById('pmForm').value,dm:document.getElementById('pmDm').value,strategy:document.getElementById('pmStrategy').value,source:document.getElementById('pmSource').value,note:document.getElementById('pmNote').value.trim()};
+  const data={name,totalSessions:sessions,form:document.getElementById('pmForm').value,dm:document.getElementById('pmDm').value,strategy:document.getElementById('pmStrategy').value,mechanism:document.getElementById('pmMechanism').value,source:document.getElementById('pmSource').value,note:document.getElementById('pmNote').value.trim(),_smMig:1};
   if(editId!==''){
     data.id=state.plannedMeetings[parseInt(editId)].id;
+    data._smMig=state.plannedMeetings[parseInt(editId)]._smMig||1;
     state.plannedMeetings[parseInt(editId)]=data;
   }else{
     data.id=generatePMID();
@@ -1617,20 +1715,19 @@ function selectMeetingByUid(uid){
 }
 function renderStrategy(){
   const el=document.getElementById('strategyContent');
-  if(!state.meetings.length && !state.plannedMeetings.length){
+  if(!state.meetings.length){
     el.innerHTML='<div class="strategy-empty">暂无会议数据</div>';
     return;
   }
-  const cats=['基投','增投','竞投','未分类'];
-  const byCat={}; cats.forEach(c=>byCat[c]=[]);
+  // 策略页不按日期筛选: 只要 strategy 非空, 不论日期/状态/是否完成 都纳入
+  const byCat={}; STRATEGY_NONEMPTY.forEach(x=>byCat[x]=[]);
   state.meetings.forEach(m=>{
-    const cat=m.strategy||'未分类';
-    byCat[cat].push({kind:'meeting', item:m, date:m.date||m.startDate||'', dm:(Array.isArray(m.dm)?m.dm.join('、'):m.dm)||''});
+    const cat=m.strategy;
+    if(!cat)return;                 // 未分类不进策略页
+    if(!byCat[cat])byCat[cat]=[];   // 兼容历史自定义值, 排在固定 8 类之后
+    byCat[cat].push({m,date:m.date||m.startDate||'',dm:(Array.isArray(m.dm)?m.dm.join('、'):m.dm)||''});
   });
-  (state.plannedMeetings||[]).forEach(pm=>{
-    const cat=pm.strategy||'未分类';
-    byCat[cat].push({kind:'planned', item:pm, date:'', dm:pm.dm||''});
-  });
+  const cats=STRATEGY_NONEMPTY.concat(Object.keys(byCat).filter(k=>STRATEGY_NONEMPTY.indexOf(k)<0));
   cats.forEach(c=>{
     byCat[c].sort((a,b)=>{
       const da=a.date||'9999-12-31';
@@ -1641,33 +1738,34 @@ function renderStrategy(){
   let html='';
   cats.forEach(cat=>{
     const list=byCat[cat];
-    if(!list.length) return;
+    if(!list || !list.length) return;
+    const ci=strategyIdx(cat);
     html+=`<div class="strategy-section">`;
-    html+=`<div class="strategy-title"><span class="tag tag-strategy-${cat==='未分类'?'none':cat}">${cat}</span><span style="color:var(--text3);font-size:12px">${list.length}场</span></div>`;
-    html+=`<table class="strategy-table"><thead><tr><th>负责DM</th><th>会议</th><th>时间</th><th>会议有效性</th></tr></thead><tbody>`;
+    html+=`<div class="strategy-title"><span class="tag st-c${ci} st-wrap">${es(cat)}</span><span style="color:var(--text3);font-size:12px">${list.length}场</span></div>`;
+    html+=`<table class="strategy-table"><thead><tr><th>会议</th><th>负责DM</th><th>机制</th><th>日期/时间</th><th>进展</th><th>状态</th><th>会议有效性</th></tr></thead><tbody>`;
     list.forEach(row=>{
-      const isPlanned=row.kind==='planned';
-      const m=row.item;
+      const m=row.m;
       const name=es(m.name);
-      const time=isPlanned?'待定':(row.date||'-');
+      const time=row.date||'<span style="color:var(--text3)">待定</span>';
+      const p=getProgress(m);
+      const statusTag=m.status==='已完成'?'tag-done':m.status==='进行中'?'tag-ongoing':m.status==='待开展'?'tag-strategy-none':'tag-planning';
+      const mi=mechanismIdx(m.mechanism);
       let effHtml='';
-      if(isPlanned){
-        effHtml='<span style="color:var(--text3)">—</span>';
+      const entry=effEntryForMeeting(m.uid);
+      if(entry && entry.attendees && entry.attendees.length){
+        effHtml=effSummaryBar(effComputeSummary(entry));
+      }else if(entry){
+        effHtml='<span style="color:var(--text3);font-size:12px">尚未录入参会客户</span>';
       }else{
-        const entry=effEntryForMeeting(m.uid);
-        if(entry && entry.attendees && entry.attendees.length){
-          const metrics=effComputeSummary(entry);
-          effHtml=effSummaryBar(metrics);
-        }else if(entry){
-          effHtml='<span style="color:var(--text3);font-size:12px">尚未录入参会客户</span>';
-        }else{
-          effHtml='<span style="color:var(--text3);font-size:12px">未完成或未同步至会议有效性</span>';
-        }
+        effHtml='<span style="color:var(--text3);font-size:12px">未完成或未同步至会议有效性</span>';
       }
       html+=`<tr>
+        <td class="st-name" onclick="selectMeetingByUid('${m.uid}')">${name}</td>
         <td>${es(row.dm)||'-'}</td>
-        <td class="st-name" onclick="${isPlanned?`switchTab('planned')`:`selectMeetingByUid('${m.uid}')`}">${name}</td>
+        <td><span class="tag mech-c${mi}">${m.mechanism?es(m.mechanism):'未分类'}</span></td>
         <td class="st-time">${time}</td>
+        <td>${p.pct}% (${p.done}/${p.total})</td>
+        <td><span class="tag ${statusTag}">${es(m.status||'筹备中')}</span></td>
         <td class="st-eff">${effHtml}</td>
       </tr>`;
     });
@@ -2394,6 +2492,7 @@ function openModal(idx){
     document.getElementById('meetingDirector').value=m.director||'';
     document.getElementById('meetingStatus').value=m.status||'筹备中';
     document.getElementById('meetingStrategy').value=m.strategy||'';
+    document.getElementById('meetingMechanism').value=m.mechanism||'';
     document.getElementById('meetingNotes').value=m.notes||'';
     const ext=m.extData||{};
     editingExtData=ext;
@@ -2412,6 +2511,7 @@ function openModal(idx){
     document.getElementById('meetingDirector').value='';
     document.getElementById('meetingStatus').value='筹备中';
     document.getElementById('meetingStrategy').value='';
+    document.getElementById('meetingMechanism').value='';
     document.getElementById('meetingNotes').value='';
     editingExtData={};
     document.getElementById('extInviteDl').value='';
@@ -2467,7 +2567,7 @@ function saveMeeting(){
   const editId=document.getElementById('editId').value;
   const type=document.getElementById('meetingType').value;
   const dmList=getMeetingDmChecks();
-  let data={name,startDate,endDate,date:startDate,type,dm:dmList,city:document.getElementById('meetingCity').value.trim(),director:document.getElementById('meetingDirector').value.trim(),status,strategy:document.getElementById('meetingStrategy').value,notes:document.getElementById('meetingNotes').value.trim(),progress:{}};
+  let data={name,startDate,endDate,date:startDate,type,dm:dmList,city:document.getElementById('meetingCity').value.trim(),director:document.getElementById('meetingDirector').value.trim(),status,strategy:document.getElementById('meetingStrategy').value,mechanism:document.getElementById('meetingMechanism').value,notes:document.getElementById('meetingNotes').value.trim(),progress:{},_smMig:1};
   if(type==='外部会议'){
     const dmQ={},dmI={};
     DM_QUOTA_LIST.forEach(d=>{
@@ -2496,6 +2596,7 @@ function saveMeeting(){
   if(editId!==''){
     const old=state.meetings[parseInt(editId)];
     data.progress=old.progress||{};data._active=old._active;data.uid=old.uid||generateUID();
+    data._smMig=old._smMig||1;   // 保留一次性迁移标记, 避免编辑后被误判为旧数据
     if(old.extData)data.extData=Object.assign({},old.extData,data.extData||{});
     if(old.type!==type){
       const newSop=getSOP(type);const newIds=new Set(newSop.map(n=>n.id));
@@ -2565,6 +2666,7 @@ function importData(){
     if(!confirm(`即将导入 ${data.meetings.length} 场会议、${(data.plannedMeetings||[]).length} 个待开展会议，当前数据将被覆盖。确认？`))return;
     state=data;
     if(!state.plannedMeetings)state.plannedMeetings=[];
+    state=normalizeState(state);   // 统一走迁移: 策略/机制兼容 + dm/日期等历史字段补全
     state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.progress)m.progress={};if(!m.status)m.status='筹备中';if(!m.startDate){if(m.type==='外部会议'&&m.extData&&m.extData.startDate){m.startDate=m.extData.startDate;m.endDate=m.extData.endDate||m.extData.startDate}else if(m.date){m.startDate=m.date;m.endDate=m.date}}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
     saveState();refreshAll();document.getElementById('progressContent').innerHTML='<div class="empty-state"><div class="icon">📋</div><p>导入完成！请从左侧选择会议</p></div>';
     showToast('✅ 数据导入成功');
