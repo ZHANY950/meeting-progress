@@ -629,7 +629,8 @@ let calendarDMFilter = '';
 // jsoneditoronline: 免费云文档存储，PUT 支持 upsert（不存在自动创建），支持 CORS
 // data 字段为 JSON 字符串；GET 读 / PUT 全量写
 // 2026-08-13 迁移原因: jsonblob.com 写入被 Cloudflare 拦截且原 blob 已丢失
-const CLOUD_DOC_ID = '11754059ad99453e903bbdb2689b5109';
+// 2026-10-18 更换存储文档：隔离仍开着旧脚本的标签页，防止旧版本再次回写覆盖。
+const CLOUD_DOC_ID = '3642bf94e2a145e89bfae1fca4237a93';
 const CLOUD_API = 'https://api.jsoneditoronline.org/v1/docs/' + CLOUD_DOC_ID;
 // Offline fallback: embedded snapshot of meeting data (updated 2026-08-11)
 // Used when cloud is unreachable AND localStorage is empty (e.g. new browser/device)
