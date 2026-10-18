@@ -590,6 +590,9 @@ function getExtTotalInvited(m){if(!m.extData||!m.extData.dmInvited)return m.extD
 
 // ============ State ============
 const STORAGE_KEY = 'meeting_progress_data_v3';
+const SYNC_DIRTY_KEY = STORAGE_KEY + '_sync_dirty';
+const SYNC_BASE_HASH_KEY = STORAGE_KEY + '_sync_base_hash';
+const SYNC_CONFLICT_BACKUP_KEY = STORAGE_KEY + '_sync_conflict_backup';
 let state = {meetings:[], plannedMeetings:[]};
 let passwordVerified = false;
 let meetingFilter = '';
@@ -637,7 +640,9 @@ let _cloudSyncing = false;
 let _lastCloudSaveTime = null;
 let _cloudSaveRetries = 0;
 let _cloudSavePending = false;
+let _cloudSaveQueued = false;
 let _localDirty = false; // 本地有未推送云端的修改时为true，防止轮询用旧云端数据覆盖
+let _startupSyncNotice = '';
 
 function updateSyncIndicator(status, timeStr){
   const dot=document.getElementById('syncDotSync');
@@ -664,19 +669,35 @@ async function cloudLoad(){
 
 async function cloudSave(data){
   if(_cloudSavePending){
-    // 上一次PUT仍在飞行中: 不丢弃新数据，3秒后用最新state重推
-    clearTimeout(_cloudSaveTimer);
-    _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, 3000);
+    // 上一次PUT仍在飞行中：标记排队，完成后用最新 state 再推一次。
+    _cloudSaveQueued = true;
     return;
   }
   _cloudSavePending = true;
   updateSyncIndicator('syncing');
+  // 必须在发请求前冻结快照。state 是可变对象，不能在请求完成后再 stringify。
+  const payload = JSON.stringify(data);
   try{
+    // 乐观并发保护：如果云端已经被另一设备更新，绝不再用本机旧副本全量覆盖。
+    if(_localDirty){
+      const latest = await cloudLoad();
+      if(latest && latest.meetings){
+        const latestHash = JSON.stringify(latest);
+        const baseHash = _cloudHash || localStorage.getItem(SYNC_BASE_HASH_KEY) || '';
+        if(!baseHash || latestHash !== baseHash){
+          localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:state,timestamp:new Date().toISOString()}));
+          updateSyncIndicator('error','检测到云端更新，已停止覆盖');
+          showToast('⚠️ 云端已有更新，本机版本已备份且未覆盖云端');
+          _cloudSaveQueued = false;
+          return false;
+        }
+      }
+    }
     // jsoneditoronline: PUT body 需带 _id + data(JSON字符串)
     const res = await fetch(CLOUD_API,{
       method:'PUT',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({_id:CLOUD_DOC_ID, name:'meeting-progress', data:JSON.stringify(data)})
+      body:JSON.stringify({_id:CLOUD_DOC_ID, name:'meeting-progress', data:payload})
     });
     if(!res.ok){
       console.error('Cloud save HTTP error:', res.status);
@@ -688,13 +709,24 @@ async function cloudSave(data){
         clearTimeout(_cloudSaveTimer);
         _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, delay);
       }
-      _cloudSavePending = false;
       return;
     }
-    _cloudHash = JSON.stringify(data);
+    // 写入后回读校验，避免接口返回成功但内容并未真正落盘。
+    const verified = await cloudLoad();
+    if(!verified || JSON.stringify(verified) !== payload){
+      throw new Error('云端回读校验失败');
+    }
+    _cloudHash = payload;
     _lastCloudSaveTime = new Date();
     _cloudSaveRetries = 0;
-    _localDirty = false; // 云端推送成功，清除脏标记
+    if(JSON.stringify(state) === payload){
+      _localDirty = false; // 只有当前 state 与已写入快照一致时才算真正同步完成
+      localStorage.removeItem(SYNC_DIRTY_KEY);
+      localStorage.removeItem(SYNC_BASE_HASH_KEY);
+    }else{
+      _localDirty = true;
+      _cloudSaveQueued = true;
+    }
     updateSyncIndicator('synced');
   }catch(e){
     console.error('Cloud save failed:',e);
@@ -707,7 +739,14 @@ async function cloudSave(data){
       _cloudSaveTimer = setTimeout(()=>{ _cloudSavePending=false; cloudSave(state); }, delay);
     }
   }
-  _cloudSavePending = false;
+  finally{
+    _cloudSavePending = false;
+    if(_cloudSaveQueued){
+      _cloudSaveQueued = false;
+      clearTimeout(_cloudSaveTimer);
+      _cloudSaveTimer = setTimeout(()=>cloudSave(state),500);
+    }
+  }
 }
 
 function debouncedCloudSave(){
@@ -778,33 +817,40 @@ function normalizeState(s){
 }
 
 async function loadState(){
-  // 本地优先：localStorage 是用户主要编辑源，云端为同步备份
-  // 防止云端旧数据覆盖本地新数据（云端不可用期间本地仍持续保存）
+  // 云端优先：旧浏览器/旧标签页里的 localStorage 不能在启动时覆盖最新云端。
+  // 只有带 sync_dirty 标记、且基线仍与云端一致的本机未同步编辑，才允许续传。
   let localData = null;
   try{const d=localStorage.getItem(STORAGE_KEY);if(d)localData=JSON.parse(d)}catch(e){}
-  if(localData && localData.meetings && localData.meetings.length > 0){
-    state = normalizeState(localData);
-    _cloudHash = JSON.stringify(state);
-  } else {
-    // 本地为空 → 尝试从云端恢复
-    const serverData = await cloudLoad();
-    if(serverData && serverData.meetings && serverData.meetings.length > 0){
-      state = normalizeState(serverData);
-      _cloudHash = JSON.stringify(state);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } else {
-      // 云端也空 → 使用嵌入的离线快照
-      if(OFFLINE_FALLBACK.meetings && OFFLINE_FALLBACK.meetings.length > 0){
-        state = normalizeState(JSON.parse(JSON.stringify(OFFLINE_FALLBACK)));
-        _cloudHash = JSON.stringify(state);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        console.log('[会议看板] 云端不可达，已加载离线数据快照（'+OFFLINE_FALLBACK.meetings.length+'场会议）');
+  const hasPendingLocal = localStorage.getItem(SYNC_DIRTY_KEY) === '1';
+  const localBaseHash = localStorage.getItem(SYNC_BASE_HASH_KEY) || '';
+  const serverData = await cloudLoad();
+  if(serverData && serverData.meetings && serverData.meetings.length > 0){
+    const serverHash = JSON.stringify(serverData);
+    if(hasPendingLocal && localData && localData.meetings && localBaseHash && localBaseHash === serverHash){
+      state = normalizeState(localData);
+      _cloudHash = serverHash;
+      _localDirty = true;
+      _startupSyncNotice = '检测到上次未完成的保存，正在继续同步';
+    }else{
+      if(hasPendingLocal && localData && JSON.stringify(localData) !== serverHash){
+        localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:localData,timestamp:new Date().toISOString()}));
+        _startupSyncNotice = '云端已有更新，已加载云端版本；本机未同步版本已安全备份';
       }
+      state = normalizeState(serverData);
+      _cloudHash = serverHash;
+      _localDirty = false;
+      localStorage.removeItem(SYNC_DIRTY_KEY);
+      localStorage.removeItem(SYNC_BASE_HASH_KEY);
     }
-  }
-  // 推送当前数据到云端（本地有数据则覆盖云端，保证云端为最新）
-  if(state.meetings.length > 0){
-    cloudSave(state);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }else if(localData && localData.meetings && localData.meetings.length > 0){
+    state = normalizeState(localData);
+    _localDirty = hasPendingLocal;
+    _startupSyncNotice = '云端暂时不可用，已进入本地模式';
+  }else if(OFFLINE_FALLBACK.meetings && OFFLINE_FALLBACK.meetings.length > 0){
+    state = normalizeState(JSON.parse(JSON.stringify(OFFLINE_FALLBACK)));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    _startupSyncNotice = '云端暂时不可用，已加载离线数据快照';
   }
 }
 
@@ -812,23 +858,23 @@ async function loadState(){
 // GitHub Pages is the stable, weixin-accessible entry; never overwrite with agentos-app.net
 const STABLE_URL = 'https://zhany950.github.io/meeting-progress/';
 async function updateCurrentUrl(){
-  let currentUrl = window.location.origin;
+  let currentUrl = window.location.href.split('#')[0].split('?')[0].replace(/[^/]*$/,'');
   // Skip agentos-app.net domains (blocked by WeChat browser, ephemeral CloudStudio instances)
-  if(currentUrl.includes('agentos-app.net')){
+  if(currentUrl.includes('agentos-app.net') || window.location.hostname === 'zhany950.github.io'){
     currentUrl = STABLE_URL;
   }
   if(!state.meta || state.meta.currentUrl === currentUrl) return;
   state.meta.currentUrl = currentUrl;
-  // Save to local first, then push to cloud
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  await cloudSave(state);
-  _cloudHash = JSON.stringify(state);
+  saveState(true);
 }
 
 function saveState(silent){
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-  _cloudHash = JSON.stringify(state);
+  if(!_localDirty){
+    localStorage.setItem(SYNC_BASE_HASH_KEY,_cloudHash||'');
+  }
   _localDirty = true; // 标记本地有未推送的修改
+  localStorage.setItem(SYNC_DIRTY_KEY,'1');
   // Real-time local backup on every save
   autoBackup();
   // Debounced cloud save
@@ -1014,8 +1060,8 @@ window.addEventListener('storage',function(e){
       const newState=JSON.parse(e.newValue);
       if(newState&&newState.meetings){
         state=normalizeState(newState);
-        _cloudHash=JSON.stringify(state);
-        _localDirty=true;
+        // 同源其他标签页的改动由发起标签页负责上传；本页只刷新展示，不能篡改云端基线。
+        _localDirty=false;
         refreshAll();
       }
     }catch(err){}
@@ -1044,7 +1090,16 @@ setInterval(async ()=>{
     updateSyncIndicator('synced');
     _cloudSyncing = false;
   } else if(!_cloudHash){
-    _cloudHash = serverHash;
+    if(_localDirty){
+      debouncedCloudSave();
+    }else{
+      state = normalizeState(serverData);
+      _cloudHash = serverHash;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      autoBackup();
+      refreshAll();
+      updateSyncIndicator('synced');
+    }
   }
 }, 15000);
 
@@ -3102,12 +3157,17 @@ async function init(){
     }
   }
   state.meetings.forEach(m=>{if(!m.uid)m.uid=generateUID();if(!m.startDate&&m.date){m.startDate=m.date;m.endDate=m.date}if(!m.endDate)m.endDate=m.startDate;if(!m.date)m.date=m.startDate});
-  saveState(true);
+  // 初始化只更新本地缓存，绝不把旧浏览器缓存自动上传覆盖云端。
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+  autoBackup();
   renderMeetingList();
   renderSummary();
   renderPlannedMeetings();
   updatePlannedBadge();
-  updateSyncIndicator('synced');
+  updateSyncIndicator(_cloudHash?'synced':'offline');
+
+  if(_startupSyncNotice) showToast('🔄 '+_startupSyncNotice);
+  if(_localDirty) debouncedCloudSave();
 
   // Update current deployment URL in cloud meta (for stale link detection)
   updateCurrentUrl();
@@ -3120,18 +3180,12 @@ async function init(){
     try{const raw=localStorage.getItem(STORAGE_KEY);if(!raw){restoreAutoBackup();refreshAll()}}catch(e){}
   },30000);
 
-  // Save before page closes (real-time backup)
+  // 页面关闭时只做本地持久化。禁止旧标签页在关闭瞬间无条件全量覆盖云端。
+  // 未完成的云端同步由 sync_dirty + sync_base_hash 在下次打开时安全续传。
   window.addEventListener('beforeunload',function(){
     try{
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
       autoBackup();
-      // Best-effort cloud save (jsoneditoronline: PUT body 带 _id + data JSON字符串)
-      fetch(CLOUD_API, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({_id:CLOUD_DOC_ID, name:'meeting-progress', data:JSON.stringify(state)}),
-        keepalive:true
-      }).catch(()=>{});
     }catch(e){}
   });
 
@@ -3149,6 +3203,17 @@ async function init(){
             localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
             refreshAll();
             showToast('🔄 已从云端同步最新数据');
+          }else if(!_cloudHash){
+            // 从离线恢复联网：本机无修改时直接加载云端；有修改时走冲突保护保存。
+            if(_localDirty){
+              debouncedCloudSave();
+            }else{
+              state=normalizeState(serverData);
+              _cloudHash=serverHash;
+              localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+              refreshAll();
+              showToast('🔄 已恢复云端最新数据');
+            }
           }
         }
       });
