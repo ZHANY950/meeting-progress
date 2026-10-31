@@ -643,6 +643,7 @@ let _cloudSaveRetries = 0;
 let _cloudSavePending = false;
 let _cloudSaveQueued = false;
 let _localDirty = false; // 本地有未推送云端的修改时为true，防止轮询用旧云端数据覆盖
+let _conflictNoticed = false;
 let _startupSyncNotice = '';
 
 function updateSyncIndicator(status, timeStr){
@@ -650,8 +651,8 @@ function updateSyncIndicator(status, timeStr){
   const text=document.getElementById('syncTextSync');
   const time=document.getElementById('syncTimeSync');
   if(!dot) return;
-  const colors={synced:'var(--green)',syncing:'var(--amber)',error:'var(--red)',offline:'var(--text-muted)'};
-  const labels={synced:'云端已同步',syncing:'同步中...',error:'同步失败(本地已存)',offline:'离线模式'};
+  const colors={synced:'var(--green)',syncing:'var(--amber)',error:'var(--red)',offline:'var(--text-muted)',pending:'var(--amber)'};
+  const labels={synced:'云端已同步',syncing:'同步中...',error:'同步失败(本地已存)',offline:'离线模式',pending:'已写入，回读待确认'};
   dot.style.background=colors[status]||colors.synced;
   text.textContent=labels[status]||labels.synced;
   time.textContent=timeStr||(_lastCloudSaveTime?_lastCloudSaveTime.toLocaleTimeString():'');
@@ -696,11 +697,13 @@ async function cloudSave(data){
         // 无基线 = 本机从未成功同步过 / 离线启动过，此时必须允许写入，
         // 否则永远推不上云端，下次打开就会被云端旧数据覆盖（数据凭空复原）。
         if(baseHash && latestHash !== baseHash){
-          localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:state,timestamp:new Date().toISOString()}));
-          updateSyncIndicator('error','检测到云端更新，已停止覆盖');
-          showToast('⚠️ 云端已有更新，本机版本已备份且未覆盖云端');
-          _cloudSaveQueued = false;
-          return false;
+          // 云端确实被别人改过：把云端那一版完整备份，然后仍然以本机为准写入。
+          // 取舍：宁可覆盖云端，也不能让用户的修改卡在本地永远推不上去（云端旧版可从
+          // 「冲突备份」完整恢复，恢复页 resume.html 能看到）。旧逻辑是直接放弃写入，
+          // 结果表现为"同步失败"一直挂着，刷新后本地改动被云端旧数据盖掉。
+          localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:latest,timestamp:new Date().toISOString()}));
+          console.warn('[会议看板] 云端版本与基线不一致：已备份云端版本，本次以本机版本写入');
+          _conflictNoticed = true;
         }
       }
     }
@@ -723,25 +726,38 @@ async function cloudSave(data){
       return;
     }
     // 写入后回读校验，避免接口返回成功但内容并未真正落盘。
-    const verified = await cloudLoad();
+    // 该服务端存在读延迟：回读不到不等于没写进，隔 1.2s 再确认一次，仍不一致也不重复 PUT
+    // （重复 PUT 无意义且可能触发限流），只标记"待确认"，下次保存会再校验。
+    let verified = await cloudLoad();
     if(!verified || JSON.stringify(verified) !== payload){
-      throw new Error('云端回读校验失败');
+      await new Promise(r=>setTimeout(r,1200));
+      verified = await cloudLoad();
     }
-    _cloudHash = payload;
-    _lastCloudSaveTime = new Date();
-    _cloudSaveRetries = 0;
-    if(JSON.stringify(state) === payload){
-      _localDirty = false; // 只有当前 state 与已写入快照一致时才算真正同步完成
-      localStorage.removeItem(SYNC_DIRTY_KEY);
-      localStorage.removeItem(SYNC_BASE_HASH_KEY);
+    if(verified && JSON.stringify(verified) === payload){
+      _cloudHash = payload;
+      _lastCloudSaveTime = new Date();
+      _cloudSaveRetries = 0;
+      if(JSON.stringify(state) === payload){
+        _localDirty = false; // 只有当前 state 与已写入快照一致时才算真正同步完成
+        localStorage.removeItem(SYNC_DIRTY_KEY);
+        localStorage.removeItem(SYNC_BASE_HASH_KEY);
+      }else{
+        _localDirty = true;
+        _cloudSaveQueued = true;
+      }
+      updateSyncIndicator('synced');
+      if(_conflictNoticed){ showToast('☁️ 已保存；云端原有版本已备份，可从恢复页找回'); _conflictNoticed = false; }
     }else{
+      // PUT 返回成功但回读仍是旧内容：大概率服务端读缓存/延迟。
+      _cloudHash = payload;
       _localDirty = true;
-      _cloudSaveQueued = true;
+      updateSyncIndicator('pending');
+      console.warn('[会议看板] PUT 成功但回读不一致，标记待确认（不重复写入）');
     }
-    updateSyncIndicator('synced');
   }catch(e){
     console.error('Cloud save failed:',e);
-    updateSyncIndicator('error','网络异常');
+    const why = e && e.name === 'AbortError' ? '请求超时' : ((e && e.message) || '网络异常');
+    updateSyncIndicator('error', why.slice(0, 18));
     // Retry with exponential backoff (max 3 retries)
     if(_cloudSaveRetries < 3){
       _cloudSaveRetries++;
@@ -762,6 +778,10 @@ async function cloudSave(data){
 
 function debouncedCloudSave(){
   clearTimeout(_cloudSaveTimer);
+  // ⚠️ 每次新触发都是一次新机会：必须重置退避计数。
+  // 否则连续失败 3 次后 _cloudSaveRetries 卡在 3，之后所有保存都在重试分支里静默 return，
+  // 界面永久停在「同步失败」，只能刷新页面才能恢复。
+  _cloudSaveRetries = 0;
   _cloudSaveTimer = setTimeout(()=>{ cloudSave(state); }, 2000);
 }
 
@@ -3209,6 +3229,19 @@ async function init(){
   renderPlannedMeetings();
   updatePlannedBadge();
   updateSyncIndicator(_cloudHash?'synced':'offline');
+
+  // 点同步状态文字 = 立即重试，不用刷新页面
+  const syncEl = document.getElementById('syncTextSync');
+  if(syncEl && !syncEl._retryBound){
+    syncEl._retryBound = true;
+    syncEl.style.cursor = 'pointer';
+    syncEl.title = '点击立即重试同步';
+    syncEl.addEventListener('click', function(){
+      _cloudSaveRetries = 0;
+      showToast('🔄 正在重试同步…');
+      cloudSave(state);
+    });
+  }
 
   if(_startupSyncNotice) showToast('🔄 '+_startupSyncNotice);
   if(_localDirty) debouncedCloudSave();

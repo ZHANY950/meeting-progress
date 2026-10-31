@@ -278,6 +278,8 @@ async function cloudSaveFull(stateData){
 
 function debouncedCloudSave(stateData){
   clearTimeout(_cloudSaveTimer);
+  // 每次新触发重置退避计数，否则连续失败 3 次后永久不再重试（界面一直"同步失败"）
+  _cloudSaveRetries = 0;
   _cloudSaveTimer = setTimeout(()=>{ cloudSaveFull(stateData); }, 2000);
 }
 
