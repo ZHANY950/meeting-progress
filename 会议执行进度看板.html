@@ -692,7 +692,10 @@ async function cloudSave(data){
       if(latest && latest.meetings){
         const latestHash = JSON.stringify(latest);
         const baseHash = _cloudHash || localStorage.getItem(SYNC_BASE_HASH_KEY) || '';
-        if(!baseHash || latestHash !== baseHash){
+        // 只有在「存在明确基线」且「云端已偏离基线」时才算真冲突。
+        // 无基线 = 本机从未成功同步过 / 离线启动过，此时必须允许写入，
+        // 否则永远推不上云端，下次打开就会被云端旧数据覆盖（数据凭空复原）。
+        if(baseHash && latestHash !== baseHash){
           localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:state,timestamp:new Date().toISOString()}));
           updateSyncIndicator('error','检测到云端更新，已停止覆盖');
           showToast('⚠️ 云端已有更新，本机版本已备份且未覆盖云端');
@@ -825,8 +828,8 @@ function normalizeState(s){
 }
 
 async function loadState(){
-  // 云端优先：旧浏览器/旧标签页里的 localStorage 不能在启动时覆盖最新云端。
-  // 只有带 sync_dirty 标记、且基线仍与云端一致的本机未同步编辑，才允许续传。
+  // 启动时决定用哪份数据。
+  // 原则：本机有「较新的未同步修改」时一律以本机为准并续传，绝不静默丢弃；否则用云端。
   let localData = null;
   try{const d=localStorage.getItem(STORAGE_KEY);if(d)localData=JSON.parse(d)}catch(e){}
   const hasPendingLocal = localStorage.getItem(SYNC_DIRTY_KEY) === '1';
@@ -834,13 +837,23 @@ async function loadState(){
   const serverData = await cloudLoad();
   if(serverData && serverData.meetings && serverData.meetings.length > 0){
     const serverHash = JSON.stringify(serverData);
-    if(hasPendingLocal && localData && localData.meetings && localBaseHash && localBaseHash === serverHash){
+    const localEditT = (localData && localData.meta && +localData.meta.lastEdit) || 0;
+    const serverEditT = (serverData.meta && +serverData.meta.lastEdit) || 0;
+    const localPending = hasPendingLocal && localData && localData.meetings && localData.meetings.length > 0;
+    if(localPending && localEditT > serverEditT){
+      // 本机改动比云端新（常见于上次同步失败/超时/关页太早）→ 以本机为准，稍后自动续传
+      state = normalizeState(localData);
+      _cloudHash = serverHash;
+      _localDirty = true;
+      _startupSyncNotice = '本机有较新的未同步修改，已按本机版本继续同步';
+    }else if(localPending && localBaseHash && localBaseHash === serverHash){
+      // 基线仍与云端一致（云端没人动过）→ 安全续传
       state = normalizeState(localData);
       _cloudHash = serverHash;
       _localDirty = true;
       _startupSyncNotice = '检测到上次未完成的保存，正在继续同步';
     }else{
-      if(hasPendingLocal && localData && JSON.stringify(localData) !== serverHash){
+      if(localPending && JSON.stringify(localData) !== serverHash){
         localStorage.setItem(SYNC_CONFLICT_BACKUP_KEY, JSON.stringify({data:localData,timestamp:new Date().toISOString()}));
         _startupSyncNotice = '云端已有更新，已加载云端版本；本机未同步版本已安全备份';
       }
@@ -867,6 +880,8 @@ async function loadState(){
 const STABLE_URL = 'https://zhany950.github.io/meeting-progress/';
 async function updateCurrentUrl(){
   let currentUrl = window.location.href.split('#')[0].split('?')[0].replace(/[^/]*$/,'');
+  // 只允许 http/https；本地 file:// 打开时不要把 file 路径写进云端 meta
+  if(!/^https?:\/\//.test(currentUrl)) return;
   // Skip agentos-app.net domains (blocked by WeChat browser, ephemeral CloudStudio instances)
   if(currentUrl.includes('agentos-app.net') || window.location.hostname === 'zhany950.github.io'){
     currentUrl = STABLE_URL;
@@ -877,6 +892,9 @@ async function updateCurrentUrl(){
 }
 
 function saveState(silent){
+  // 记录本机最后编辑时间，用于多标签页/多设备仲裁（谁的新听谁的）
+  state.meta=state.meta||{};
+  state.meta.lastEdit=Date.now();
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
   if(!_localDirty){
     localStorage.setItem(SYNC_BASE_HASH_KEY,_cloudHash||'');
@@ -1078,9 +1096,16 @@ window.addEventListener('storage',function(e){
     try{
       const newState=JSON.parse(e.newValue);
       if(newState&&newState.meetings){
+        // ⚠️ 本页仍有未推送的改动时，外部写入一律不采信。
+        // （同源的单场页/旧标签页可能读到旧云端后又写回 localStorage，
+        //   以前这里会把 _localDirty 清成 false，导致本页改动被静默丢弃并回写覆盖云端）
+        if(_localDirty||_cloudSavePending) return;
+        // 内容比本页更旧的也不接受
+        const inT=(newState.meta&&+newState.meta.lastEdit)||0;
+        const curT=(state.meta&&+state.meta.lastEdit)||0;
+        if(inT&&curT&&inT<curT) return;
         state=normalizeState(newState);
-        // 同源其他标签页的改动由发起标签页负责上传；本页只刷新展示，不能篡改云端基线。
-        _localDirty=false;
+        // 注意：不再清零 _localDirty，脏标记只能由 cloudSave 成功写入后清除
         refreshAll();
       }
     }catch(err){}
