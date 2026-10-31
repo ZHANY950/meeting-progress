@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据恢复 · 会议执行进度看板</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#f4f6fa;color:#1e293b;margin:0;padding:20px}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:20px;margin:0 0 6px}
+.sub{font-size:13px;color:#64748b;margin:0 0 16px;line-height:1.6}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+input[type=text]{flex:1;min-width:200px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;background:#fff}
+button{padding:9px 14px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;cursor:pointer;font-weight:600}
+button.ghost{background:#fff;color:#334155;border:1px solid #cbd5e1}
+button.ok{background:#15803d}
+button:disabled{opacity:.5;cursor:not-allowed}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.card.cur{border-color:#2563eb;box-shadow:0 0 0 3px #dbeafe}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;font-weight:600}
+.t-cur{background:#dbeafe;color:#1d4ed8}
+.t-auto{background:#dcfce7;color:#15803d}
+.t-conf{background:#fef3c7;color:#b45309}
+.t-cloud{background:#ede9fe;color:#6d28d9}
+.meta{font-size:12px;color:#64748b;margin-top:6px;line-height:1.7}
+.num{font-variant-numeric:tabular-nums;font-weight:700;color:#0f172a}
+.names{font-size:12px;color:#475569;margin-top:8px;line-height:1.7;word-break:break-all}
+.diff{font-size:12px;margin-top:6px}
+.up{color:#15803d;font-weight:600}
+.down{color:#b91c1c;font-weight:600}
+.note{background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:12.5px;padding:10px 12px;border-radius:8px;margin-bottom:14px;line-height:1.7}
+.hide{display:none}
+#log{font-size:12px;color:#334155;white-space:pre-wrap;background:#f1f5f9;border-radius:8px;padding:10px;margin-top:12px;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>数据恢复</h1>
+  <p class="sub">本页只读取你浏览器里保存的历史快照，列出来后你可以挑一份恢复。<b>恢复只写本机缓存，不碰云端</b>，恢复后打开总看板即会自动同步上去。</p>
+  <div class="note">⚠️ 建议先别在总看板里继续编辑，直接来这里挑时间最近、内容最全的那份。<br>如果这份页面里所有快照都不包含你要的数据，说明它从未被保存到本机（比如在别的手机/电脑上编辑的）。</div>
+
+  <div class="bar">
+    <input type="text" id="q" placeholder="搜索会议名 / 主任 / 城市，快速定位哪份快照里还有它">
+    <button class="ghost" id="btnCloud">读取云端当前版本</button>
+    <button class="ghost" id="btnReload">重新扫描本机</button>
+  </div>
+
+  <div id="list"></div>
+  <div id="log"></div>
+</div>
+
+<script>
+const STORAGE_KEY = 'meeting_progress_data_v3';
+const OLD_KEY = 'meeting_progress_data_v2';
+const AUTO_KEY = 'meeting_auto_backup_v3';
+const CONFLICT_KEY = STORAGE_KEY + '_sync_conflict_backup';
+const DIRTY_KEY = STORAGE_KEY + '_sync_dirty';
+const BASE_KEY = STORAGE_KEY + '_sync_base_hash';
+const CLOUD_API = 'https://api.jsoneditoronline.org/v1/docs/3642bf94e2a145e89bfae1fca4237a93';
+
+let entries = [];
+let currentSnap = null;
+
+function parseSnap(raw, wrapKey) {
+  try {
+    let o = JSON.parse(raw);
+    if (o && o.data && o.data.meetings) return { state: o.data, ts: o.timestamp || '' };
+    if (o && o.meetings) return { state: o, ts: '' };
+    return null;
+  } catch (e) { return null; }
+}
+
+function scan() {
+  entries = [];
+  const push = (label, tag, raw, tagCls) => {
+    const s = parseSnap(raw);
+    if (!s) return;
+    entries.push({ label, tag, tagCls, state: s.state, ts: s.ts });
+  };
+  push('本机当前数据', '当前', localStorage.getItem(STORAGE_KEY), 't-cur');
+  push('自动备份 ①（最新）', '备份', localStorage.getItem(AUTO_KEY), 't-auto');
+  push('自动备份 ②', '备份', localStorage.getItem(AUTO_KEY + '_1'), 't-auto');
+  push('自动备份 ③', '备份', localStorage.getItem(AUTO_KEY + '_2'), 't-auto');
+  push('冲突备份（曾被判定为冲突的本机版本）', '冲突备份', localStorage.getItem(CONFLICT_KEY), 't-conf');
+  push('旧版缓存 v2', '历史', localStorage.getItem(OLD_KEY), 't-auto');
+  currentSnap = entries[0] && entries[0].tag === '当前' ? entries[0].state : null;
+}
+
+async function loadCloud() {
+  try {
+    const res = await fetch(CLOUD_API + '?_=' + Date.now(), { cache: 'no-store' });
+    const j = await res.json();
+    const s = JSON.parse(j.data);
+    if (s && s.meetings) {
+      entries = entries.filter(e => e.tag !== '云端');
+      entries.unshift({ label: '云端当前版本', tag: '云端', tagCls: 't-cloud', state: s, ts: (j.updated || '') });
+    }
+    render();
+  } catch (e) {
+    log('云端读取失败：' + (e.message || e));
+  }
+}
+
+function fmtTs(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    if (isNaN(d)) return ts;
+    return d.toLocaleString('zh-CN', { hour12: false });
+  } catch (e) { return ts; }
+}
+
+function statOf(s) {
+  const ms = (s && s.meetings) || [];
+  const pm = (s && s.plannedMeetings) || [];
+  const ef = (s && s.effectiveness && s.effectiveness.entries) || [];
+  let done = 0;
+  ms.forEach(m => { if (m.status === '已完成') done++; });
+  const names = ms.slice().sort((a, b) => (b.startDate || b.date || '').localeCompare(a.startDate || a.date || '')).slice(0, 6)
+    .map(m => (m.name || '').slice(0, 16) + ' ' + (m.startDate || m.date || ''));
+  return { n: ms.length, done, pm: pm.length, ef: ef.length, names, ms };
+}
+
+function render() {
+  const q = (document.getElementById('q').value || '').trim();
+  const box = document.getElementById('list');
+  if (!entries.length) { box.innerHTML = '<div class="card">本机没有找到任何快照。</div>'; return; }
+  const curStat = currentSnap ? statOf(currentSnap) : { n: 0, ms: [] };
+  box.innerHTML = entries.map((e, i) => {
+    const st = statOf(e.state);
+    const hay = st.ms.map(m => [m.name, m.director, m.city, (m.dm || []).toString()].join(' ')).join(' ');
+    if (q && hay.indexOf(q) < 0) return '';
+    // 用 uid 比对（会议改名不该被算成"多一场少一场"）
+    const keyOf = m => m.uid || m.name;
+    const curKeys = new Set((curStat.ms || []).map(keyOf));
+    const newKeys = new Set(st.ms.map(keyOf));
+    const plus = [...newKeys].filter(x => !curKeys.has(x)).length;
+    const minus = [...curKeys].filter(x => !newKeys.has(x)).length;
+    let diffHtml = '';
+    if (e.tag !== '当前' && currentSnap) {
+      if (plus || minus) diffHtml = `<div class="diff">与当前数据相比：<span class="up">多 ${plus} 场</span> / <span class="down">少 ${minus} 场</span></div>`;
+      else diffHtml = '<div class="diff" style="color:#64748b">会议名单与当前一致</div>';
+    }
+    const isCur = e.tag === '当前';
+    return `<div class="card ${isCur ? 'cur' : ''}">
+      <div class="card-head">
+        <div>
+          <span class="tag ${e.tagCls}">${e.tag}</span>
+          <b style="margin-left:6px">${e.label}</b>
+          ${isCur ? '<span style="font-size:12px;color:#2563eb;margin-left:6px">（看板现在正在用这份）</span>' : ''}
+        </div>
+        <div>${isCur ? '' : `<button class="ok" data-i="${i}">恢复这份</button>`}</div>
+      </div>
+      <div class="meta">保存时间：<span class="num">${fmtTs(e.ts)}</span>　会议 <span class="num">${st.n}</span> 场（已完成 ${st.done}）　待开展 <span class="num">${st.pm}</span> 项　有效性条目 <span class="num">${st.ef}</span> 条</div>
+      ${diffHtml}
+      <div class="names">最近会议：${st.names.join(' ｜ ') || '—'}</div>
+    </div>`;
+  }).join('') || '<div class="card">没有匹配的快照。</div>';
+
+  box.querySelectorAll('button[data-i]').forEach(b => {
+    b.onclick = () => restore(+b.dataset.i);
+  });
+}
+
+function restore(i) {
+  const e = entries[i];
+  if (!e) return;
+  if (!confirm('确定用「' + e.label + '」覆盖本机当前数据？\n\n会先把你现在的数据另存一份再覆盖，不会丢。')) return;
+  try {
+    // 1) 先给当前数据留一份退路
+    const now = localStorage.getItem(STORAGE_KEY);
+    if (now) localStorage.setItem(AUTO_KEY, JSON.stringify({ data: JSON.parse(now), timestamp: new Date().toISOString(), version: '3.0-rescue' }));
+
+    // 2) 写入选中的快照，并打上新的编辑时间戳（否则下次打开会被云端旧数据判为"更旧"而丢弃）
+    const snap = JSON.parse(JSON.stringify(e.state));
+    snap.meta = snap.meta || {};
+    snap.meta.lastEdit = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snap));
+
+    // 3) 标记为"有未推送改动"，让总看板启动时以本机为准并自动推上云端
+    localStorage.setItem(DIRTY_KEY, '1');
+    localStorage.removeItem(BASE_KEY);
+
+    log('✅ 已恢复「' + e.label + '」：会议 ' + (snap.meetings || []).length + ' 场。\n现在打开总看板（会议执行进度看板.html），它会自动把这份数据同步到云端。\n你恢复前的数据已存为「自动备份 ①」。');
+    scan();
+    render();
+  } catch (err) {
+    log('❌ 恢复失败：' + (err.message || err));
+  }
+}
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+document.getElementById('q').oninput = render;
+document.getElementById('btnReload').onclick = () => { scan(); render(); log('已重新扫描本机快照。'); };
+document.getElementById('btnCloud').onclick = async (ev) => {
+  ev.target.disabled = true; ev.target.textContent = '读取中…';
+  await loadCloud();
+  ev.target.disabled = false; ev.target.textContent = '重新读取云端';
+};
+
+scan();
+render();
+</script>
+</body>
+</html>
