@@ -1963,7 +1963,7 @@ let _mtgOpen = {};             // meetingUid -> true 表示展开有效性明细
 let _legacyOpen = false;       // 「历史未关联会议」区域
 let _effInfoOpen = false;      // 口径说明卡
 let _effFocus = null;          // 重渲染后恢复焦点的输入框id
-let _effOcr = {entryId:null, img:null, text:'', busy:false};
+let _effOcr = {entryId:null, img:null, text:'', busy:false, analyzed:null, statusMsg:''};
 let _effFormOpen = false;
 
 function effInvalidate(){ _effMap = null; _effWkSeq = null; }
@@ -2266,6 +2266,58 @@ function effSummaryInline(metrics){
   s += '</span>';
   return s;
 }
+// 海报OCR分诊面板（策略页/平铺页共用）：已匹配chips + 疑似匹配勾选 + 疑似新客户(可带医院) + 医院chips
+function effOcrPanelHtml(id){
+  let html = '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
+  html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📎 日程海报识别 <span style="font-weight:400;color:var(--text3)">（增强：模糊匹配 + 新客户/医院补充）</span></div>';
+  if(_effOcr.img) html += '<img src="'+_effOcr.img+'" style="max-height:220px;max-width:100%;border-radius:6px;margin-bottom:8px;display:block">';
+  html += '<div id="effOcrStatus" style="font-size:12px;color:var(--text2);margin-bottom:8px">'+(_effOcr.busy ? '识别中，请稍候…' : (_effOcr.statusMsg || '识别完成，可修正文字后重新提取'))+'</div>';
+  if(!_effOcr.busy){
+    const an = _effOcr.analyzed;
+    if(an){
+      if(an.matched.length){
+        html += '<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">✅ 画像表客户（已自动加入，误识别可在下方表格点 ✕ 删除）</div>';
+        an.matched.forEach(n=>{ html += '<span class="tag tag-done" style="font-size:11px;margin:2px 4px 2px 0">'+es(n)+'</span>'; });
+        html += '</div>';
+      }
+      if(an.fuzzy.length){
+        html += '<div style="margin-bottom:8px;padding:8px;background:var(--card);border-radius:6px">';
+        html += '<div style="font-size:11px;color:var(--amber);margin-bottom:4px">🔍 疑似匹配（OCR可能有单字误差，请勾选确认）</div>';
+        an.fuzzy.forEach((f,i)=>{
+          html += '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;margin:2px 12px 2px 0;cursor:pointer"><input type="checkbox" id="effFuzzy_'+i+'" checked> <b>'+es(f.n)+'</b> <span style="color:var(--text3);font-size:10px">原文≈'+es(f.seg)+'</span></label>';
+        });
+        html += '</div>';
+      }
+      if(an.extra.length){
+        html += '<div style="margin-bottom:8px;padding:8px;background:var(--card);border-radius:6px">';
+        html += '<div style="font-size:11px;color:var(--text2);margin-bottom:4px">➕ 疑似新客户（患者画像表中无记录，勾选添加；有医院可在下拉框选择）</div>';
+        an.extra.forEach((x,i)=>{
+          html += '<div style="display:flex;align-items:center;gap:6px;margin:3px 0">';
+          html += '<label style="display:inline-flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;min-width:90px"><input type="checkbox" id="effExtra_'+i+'"> <b>'+es(x.n)+'</b></label>';
+          html += '<select id="effHosp_'+i+'" style="font-size:11px;padding:2px 4px;border:1px solid var(--border);border-radius:4px;max-width:280px;background:var(--card);color:var(--text)">';
+          html += '<option value="">医院（未识别/不填）</option>';
+          (an.hospitals||[]).forEach(h=>{ html += '<option value="'+es(h)+'">'+es(h)+'</option>'; });
+          html += '</select></div>';
+        });
+        html += '</div>';
+      }
+      if((an.hospitals||[]).length){
+        html += '<div style="margin-bottom:8px"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">🏥 识别到医院（供新客户下拉选择）</div>';
+        an.hospitals.forEach(h=>{ html += '<span class="tag" style="font-size:10px;margin:2px 4px 2px 0;background:var(--teal-bg);color:var(--teal)">'+es(h)+'</span>'; });
+        html += '</div>';
+      }
+      if(!an.matched.length && !an.fuzzy.length && !an.extra.length && !an.hospitals.length){
+        html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">未识别到客户/医院 —— 可在下方修正文字后重新提取，或手动输入姓名（每行一个）</div>';
+      }
+    }
+    html += '<textarea id="effOcrText" rows="4" placeholder="海报识别文字（可手动修正后点「重新提取」）" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:8px;font-family:var(--font)">'+es(_effOcr.text)+'</textarea>';
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="effOcrExtract(\''+id+'\')">从文字重新提取</button>';
+    if(an && (an.fuzzy.length || an.extra.length)) html += '<button class="btn btn-sm" onclick="effOcrConfirm(\''+id+'\')">✔ 确认勾选项</button>';
+    html += '<button class="btn btn-sm" style="background:var(--bg)" onclick="_effOcr.entryId=null;effRerender()">关闭</button></div>';
+  }
+  html += '</div>';
+  return html;
+}
 // 单场会议的有效性明细卡（策略页展开行 / 历史区 复用）
 function effEntryCard(item, collapsed){
   const info = effSalesInfo();
@@ -2282,15 +2334,9 @@ function effEntryCard(item, collapsed){
   html += '</div></div>';
   html += '<input type="file" id="effPoster_'+item.id+'" accept="image/*" style="display:none" onchange="effPosterPick(\''+item.id+'\',this)">';
   html += '<input type="file" id="effTableFile_'+item.id+'" accept=".xlsx,.xls,.csv" style="display:none" onchange="effTablePick(\''+item.id+'\',this)">';
-  // 海报OCR面板
+  // 海报OCR面板（分诊增强版）
   if(_effOcr.entryId === item.id){
-    html += '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
-    html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📎 日程海报识别</div>';
-    if(_effOcr.img) html += '<img src="'+_effOcr.img+'" style="max-height:220px;max-width:100%;border-radius:6px;margin-bottom:8px;display:block">';
-    html += '<div id="effOcrStatus" style="font-size:12px;color:var(--text2);margin-bottom:8px">'+(_effOcr.busy?'识别中，请稍候…':'识别完成，可修正文字后再次提取')+'</div>';
-    html += '<textarea id="effOcrText" rows="4" placeholder="海报识别文字（可手动修正）" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:8px;font-family:var(--font)" oninput="_effOcr.text=this.value">'+es(_effOcr.text)+'</textarea>';
-    html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="effOcrExtract(\''+item.id+'\')">从文字提取客户并添加</button>';
-    html += '<button class="btn btn-sm" style="background:var(--bg)" onclick="_effOcr.entryId=null;effRerender()">关闭</button></div></div>';
+    html += effOcrPanelHtml(item.id);
   }
   // 日程表格面板
   if(_effTable.entryId === item.id){
@@ -2367,7 +2413,13 @@ function effEntryCard(item, collapsed){
     html += '<tr>';
     html += '<td style="white-space:nowrap">'+es(r.n)+'</td>';
     if(!r.matched){
-      html += '<td colspan="12" style="color:var(--text-muted)">患者画像表无记录</td>';
+      const eh = (item.hospitals||{})[r.n];
+      if(eh){
+        html += '<td style="font-size:11px;color:var(--text2)">'+es(eh)+'</td>';
+        html += '<td colspan="11" style="color:var(--text-muted)">画像表外客户</td>';
+      }else{
+        html += '<td colspan="12" style="color:var(--text-muted)">患者画像表无记录</td>';
+      }
     }else{
       html += '<td style="font-size:11px;color:var(--text2)">'+es(r.h)+'</td>';
       html += '<td>'+aimDmBadge(r.dm)+'</td>';
@@ -2551,13 +2603,7 @@ function effBoardHtml(mode){
     html += '<input type="file" id="effPoster_'+item.id+'" accept="image/*" style="display:none" onchange="effPosterPick(\''+item.id+'\',this)">';
     html += '<input type="file" id="effTableFile_'+item.id+'" accept=".xlsx,.xls,.csv" style="display:none" onchange="effTablePick(\''+item.id+'\',this)">';
     if(_effOcr.entryId === item.id){
-      html += '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
-      html += '<div style="font-size:12px;font-weight:600;margin-bottom:8px">📎 日程海报识别</div>';
-      if(_effOcr.img) html += '<img src="'+_effOcr.img+'" style="max-height:220px;max-width:100%;border-radius:6px;margin-bottom:8px;display:block">';
-      html += '<div id="effOcrStatus" style="font-size:12px;color:var(--text2);margin-bottom:8px">'+(_effOcr.busy?'识别中，请稍候…':'识别完成，可修正文字后再次提取')+'</div>';
-      html += '<textarea id="effOcrText" rows="4" placeholder="海报识别文字（可手动修正）" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:12px;margin-bottom:8px;font-family:var(--font)" oninput="_effOcr.text=this.value">'+es(_effOcr.text)+'</textarea>';
-      html += '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="effOcrExtract(\''+item.id+'\')">从文字提取客户并添加</button>';
-      html += '<button class="btn btn-sm" style="background:var(--bg)" onclick="_effOcr.entryId=null;effRerender()">关闭</button></div></div>';
+      html += effOcrPanelHtml(item.id);
     }
     if(_effTable.entryId === item.id){
       html += '<div style="background:var(--bg);border:1px dashed var(--border);border-radius:8px;padding:12px;margin-bottom:10px">';
@@ -2614,7 +2660,11 @@ function effBoardHtml(mode){
         html += '<th>趋势</th><th>折线</th><th></th></tr></thead><tbody>';
         rows.forEach(r=>{
           html += '<tr><td style="white-space:nowrap">'+es(r.n)+'</td>';
-          if(!r.matched){ html += '<td colspan="12" style="color:var(--text-muted)">患者画像表无记录</td>'; }
+          if(!r.matched){
+            const eh = (item.hospitals||{})[r.n];
+            if(eh){ html += '<td style="font-size:11px;color:var(--text2)">'+es(eh)+'</td><td colspan="11" style="color:var(--text-muted)">画像表外客户</td>'; }
+            else{ html += '<td colspan="12" style="color:var(--text-muted)">患者画像表无记录</td>'; }
+          }
           else{
             html += '<td style="font-size:11px;color:var(--text2)">'+es(r.h)+'</td>';
             html += '<td>'+aimDmBadge(r.dm)+'</td>';
@@ -2718,7 +2768,7 @@ function effPosterPick(id, input){
   if(!f) return;
   const rd = new FileReader();
   rd.onload = ()=>{
-    _effOcr = {entryId:id, img:rd.result, text:'', busy:true};
+    _effOcr = {entryId:id, img:rd.result, text:'', busy:true, analyzed:null, statusMsg:''};
     effRerender();
     effRunOcr(id);
   };
@@ -2739,51 +2789,199 @@ function effLoadScript(urls){
   });
 }
 async function effRunOcr(id){
-  const st = document.getElementById('effOcrStatus');
   const setSt = t=>{ const el = document.getElementById('effOcrStatus'); if(el) el.textContent = t; };
   try{
     setSt('加载识别引擎…');
-    await effLoadScript([
-      'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
-      'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'
-    ]);
+    if(typeof Tesseract === 'undefined'){
+      await effLoadScript([
+        'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
+        'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'
+      ]);
+    }
+    // 图片预处理: 放大2~3倍 + 灰度 + Otsu二值化，提升姓名小字识别率（失败则用原图）
+    let imgInput = _effOcr.img;
+    setSt('正在预处理图片（放大+增强）…');
+    try{ const c = await effPreprocessImg(_effOcr.img); if(c) imgInput = c; }catch(e){}
     setSt('正在识别海报文字（约10~30秒）…');
-    const res = await Tesseract.recognize(_effOcr.img, 'chi_sim', {
-      logger: m=>{ if(m.status === 'recognizing text') setSt('正在识别… ' + Math.round(m.progress*100) + '%'); }
-    });
+    let res;
+    try{
+      res = await Tesseract.recognize(imgInput, 'chi_sim', {
+        logger: m=>{ if(m.status === 'recognizing text') setSt('正在识别… ' + Math.round(m.progress*100) + '%'); }
+      });
+    }catch(e1){
+      // 预处理图识别失败时回退原图再试一次
+      res = await Tesseract.recognize(_effOcr.img, 'chi_sim', {});
+    }
     _effOcr.text = res && res.data ? res.data.text : '';
     _effOcr.busy = false;
-    effOcrApply(id);
+    effOcrAuto(id);
   }catch(err){
     _effOcr.busy = false;
-    setSt('⚠️ 自动识别失败（' + (err && err.message ? err.message : '网络/CDN不可用') + '）。请在下方文本框手动输入海报上的客户姓名（每行一个），然后点「从文字提取客户并添加」。');
+    _effOcr.statusMsg = '⚠️ 自动识别失败（' + (err && err.message ? err.message : '网络/CDN不可用') + '）。请在下方文本框手动输入海报上的客户姓名（每行一个），然后点「从文字重新提取」。';
     effRerender();
   }
 }
-function effOcrMatch(text){
-  const norm = String(text||'').replace(/[\s\u3000]+/g,'');
-  if(!norm) return [];
-  const m = effSalesMap();
-  return Object.keys(m).filter(n=>norm.includes(n));
+// ---- 海报识别增强（2026-10-18）：模糊匹配 + 新客户/医院分诊 ----
+// ① 模糊匹配: OCR单字误差（写错/漏字）不再导致漏识别；疑似结果需人工勾选确认，避免误报
+// ② 新客户: 画像表中没有的参会者识别为「疑似新客户」，可勾选添加并指定医院（存 entry.hospitals）
+// ③ 医院: 识别文本中的瞄准镜医院名单，用于新客户医院下拉
+// 图片预处理：放大 + 灰度 + Otsu 全局二值化；canvas 不可用（如测试环境）返回 null 走原图
+function effPreprocessImg(dataUrl){
+  return new Promise(resolve=>{
+    if(typeof Image === 'undefined' || !document.createElement('canvas').getContext){ resolve(null); return; }
+    const im = new Image();
+    im.onload = ()=>{
+      try{
+        const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+        if(!w || !h){ resolve(null); return; }
+        const scale = Math.min(3, Math.max(2, 1600 / w));   // 目标宽度≥1600px
+        const c = document.createElement('canvas');
+        c.width = Math.round(w * scale); c.height = Math.round(h * scale);
+        const ctx = c.getContext('2d');
+        ctx.drawImage(im, 0, 0, c.width, c.height);
+        const d = ctx.getImageData(0, 0, c.width, c.height);
+        const px = d.data, n = px.length / 4;
+        const gray = new Uint8Array(n), hist = new Array(256).fill(0);
+        for(let i=0;i<n;i++){
+          const g = (px[i*4]*299 + px[i*4+1]*587 + px[i*4+2]*114) / 1000;
+          gray[i] = g; hist[g | 0]++;
+        }
+        // Otsu 自动阈值
+        let total = n, sum = 0;
+        for(let i=0;i<256;i++) sum += i * hist[i];
+        let sumB = 0, wB = 0, maxVar = 0, thr = 128;
+        for(let t=0;t<256;t++){
+          wB += hist[t]; if(!wB) continue;
+          const wF = total - wB; if(!wF) break;
+          sumB += t * hist[t];
+          const mB = sumB / wB, mF = (sum - sumB) / wF;
+          const v = wB * wF * (mB - mF) * (mB - mF);
+          if(v > maxVar){ maxVar = v; thr = t; }
+        }
+        for(let i=0;i<n;i++){
+          const v = gray[i] > thr ? 255 : 0;
+          px[i*4] = px[i*4+1] = px[i*4+2] = v;
+        }
+        ctx.putImageData(d, 0, 0);
+        resolve(c);
+      }catch(e){ resolve(null); }
+    };
+    im.onerror = ()=>resolve(null);
+    im.src = dataUrl;
+  });
 }
-function effOcrApply(id){
+// 同长度单字替换差异（汉明距离=1）；2字名不适用（误报风险高）
+function effDist1(a, b){
+  if(a.length !== b.length) return false;
+  let d = 0;
+  for(let i=0;i<a.length;i++){ if(a[i] !== b[i] && ++d > 1) return false; }
+  return d === 1;
+}
+const EFF_HOSP_KEYWORDS = /(医院|大学|附属|卫生院|诊所|医药|药业|疾病预防|卫生中心|药房|医疗)/;
+const EFF_TITLE_SUFFIX = /(主任医师|副主任医师|主治医师|护士长|副主任|主任|教授|医师|老师|博士|院长|书记|先生|女士)+$/;
+const EFF_STOP_TOKENS = /^(会议|日程|议程|主持|主持|讲者|嘉宾|讨论|点评|时间|地点|参会|客户|签到|签名|专家|科室|姓名|医院|项目|观念|提升|巡讲|论坛|沙龙|学习班|学术|东二区|乐泰可|神经内科|内科|神经|头痛|眩晕|癫痫|脑血管|睡眠|心理|疼痛|门诊|讲题|课题|致辞|总结|合影|茶歇|午餐|晚餐|欢迎|介绍|老师)$/;
+// 综合分析 OCR 文本 → {matched 精确匹配, fuzzy 疑似匹配, extra 疑似新客户, hospitals 识别到医院}
+function effOcrAnalyze(text){
+  const raw = String(text || '');
+  const norm = raw.replace(/[\s\u3000]+/g, '');
+  const sales = effSalesMap();
+  const names = Object.keys(sales);
+  const matched = [], fuzzy = [], segsAll = [];
+  if(norm){
+    names.forEach(n=>{
+      if(norm.includes(n)){ matched.push(n); return; }
+      if(n.length < 3) return;
+      const cands = [];
+      const L = n.length;
+      // 单字替换: 文本中与名字等长、仅差一个字的片段
+      for(let i=0;i+L<=norm.length;i++){
+        const seg = norm.substr(i, L);
+        if(seg !== n && effDist1(seg, n)){ cands.push(seg); break; }
+      }
+      // 漏字: 名字去掉任意一字后的片段完整出现在文本中
+      for(let j=0;j<n.length;j++){
+        const minus = n.slice(0, j) + n.slice(j + 1);
+        if(minus.length >= 2 && norm.includes(minus)){ cands.push(minus); break; }
+      }
+      cands.forEach(s=>segsAll.push(s));
+      if(cands.length && !fuzzy.some(f=>f.n===n)) fuzzy.push({n, seg:cands[0]});
+    });
+  }
+  // 医院识别（按瞄准镜 166 家医院名单精确包含匹配；剔除空条目防 includes('') 恒真）
+  const hnorm = aimNorm(norm);
+  const hospitals = hnorm ? AIM_HOS.filter(h=>{ const nh = aimNorm(h); return nh && hnorm.includes(nh); }) : [];
+  // 疑似新客户候选：分词 → 2~4位纯汉字 → 剔除标题/停用词/医院词/已有客户片段/疑似匹配片段
+  const extra = [];
+  const seen = {};
+  const known = {};
+  matched.concat(fuzzy.map(f=>f.n)).forEach(n=>{ known[n] = 1; });
+  const segs = segsAll;
+  const toks = raw.split(/[\s\u3000\n\r,，、;；|·・:：!！?？()（）\[\]【】<>《》"'“”]+/);
+  toks.forEach(t0=>{
+    let t = String(t0 || '').replace(/^[0-9.、·•\-—–:#]+/, '').replace(EFF_TITLE_SUFFIX, '');
+    if(!/^[一-鿿]{2,4}$/.test(t)) return;
+    if(EFF_STOP_TOKENS.test(t) || EFF_HOSP_KEYWORDS.test(t) || /[科院]/.test(t)) return;
+    if(known[t] || seen[t]) return;
+    if(names.some(n=>n.includes(t) || t.includes(n))) return;      // 已有客户姓名片段，不算新客户
+    if(segs.some(s=>s.includes(t) || t.includes(s))) return;       // 疑似匹配片段，避免与新客户重复
+    if(hospitals.some(h=>aimNorm(h).includes(t))) return;          // 医院名片段
+    seen[t] = 1;
+    extra.push({n:t});
+  });
+  return {matched, fuzzy, extra, hospitals};
+}
+// 兼容旧调用（日程表格路径仍用精确匹配）
+function effOcrMatch(text){
+  return effOcrAnalyze(text).matched;
+}
+// OCR 完成 / 手动重新提取后：精确匹配自动加入，疑似项进入分诊区
+function effOcrAuto(id){
   ensureEffData();
   const e = state.effectiveness.entries.find(x=>x.id === id);
-  if(!e) return;
-  const cands = effOcrMatch(_effOcr.text);
-  e.attendees = e.attendees || [];
+  const an = effOcrAnalyze(_effOcr.text);
+  _effOcr.analyzed = an;
   let added = 0;
-  cands.forEach(n=>{ if(!e.attendees.includes(n)){ e.attendees.push(n); added++; } });
-  saveState(); effRerender();
-  if(added) console.log('[eff] OCR识别并添加', added, '位客户');
-  const st = document.getElementById('effOcrStatus');
-  if(st) st.textContent = cands.length
-    ? '✅ 已自动识别并添加 ' + cands.length + ' 位客户（新增 ' + added + '），请在表格中核对，误识别可点 ✕ 删除'
-    : '未识别到患者画像表中的客户，请在下方修正文字后重新提取';
+  if(e){
+    e.attendees = e.attendees || [];
+    an.matched.forEach(n=>{ if(!e.attendees.includes(n)){ e.attendees.push(n); added++; } });
+    if(an.matched.length) saveState();
+  }
+  _effOcr.statusMsg = '✅ 已自动添加 ' + an.matched.length + ' 位画像表客户（本次新增 ' + added + '）'
+    + (an.fuzzy.length ? '｜另有 <b>' + an.fuzzy.length + '</b> 位疑似匹配待勾选确认' : '')
+    + (an.extra.length ? '｜<b>' + an.extra.length + '</b> 个疑似新客户待勾选' : '')
+    + (an.hospitals.length ? '｜识别到医院 ' + an.hospitals.length + ' 家' : '');
+  effRerender();
 }
 function effOcrExtract(id){
-  _effOcr.text = (document.getElementById('effOcrText')||{}).value || _effOcr.text;
-  effOcrApply(id);
+  const ta = document.getElementById('effOcrText');
+  if(ta) _effOcr.text = ta.value;
+  effOcrAuto(id);
+}
+// 确认勾选项：疑似匹配 + 新客户（可带医院）
+function effOcrConfirm(id){
+  ensureEffData();
+  const e = state.effectiveness.entries.find(x=>x.id === id);
+  const an = _effOcr.analyzed;
+  if(!e || !an) return;
+  e.attendees = e.attendees || [];
+  e.hospitals = e.hospitals || {};
+  let added = 0, hset = 0;
+  (an.fuzzy || []).forEach((f, i)=>{
+    const cb = document.getElementById('effFuzzy_' + i);
+    if(cb && cb.checked && !e.attendees.includes(f.n)){ e.attendees.push(f.n); added++; }
+  });
+  (an.extra || []).forEach((x, i)=>{
+    const cb = document.getElementById('effExtra_' + i);
+    if(cb && cb.checked && !e.attendees.includes(x.n)){
+      e.attendees.push(x.n); added++;
+      const sel = document.getElementById('effHosp_' + i);
+      if(sel && sel.value){ e.hospitals[x.n] = sel.value; hset++; }
+    }
+  });
+  saveState();
+  _effOcr.statusMsg = '✅ 已确认添加 ' + added + ' 位客户' + (hset ? '（其中 ' + hset + ' 位已登记医院）' : '') + '，明细见下方表格';
+  effRerender();
+  console.log('[eff] OCR确认勾选项', added, '位（含医院', hset, '）');
 }
 // ---- 日程表格识别（Excel/CSV 直接解析, 比海报OCR更快更准） ----
 let _effTable = {entryId:null, busy:false, matched:[], err:''};
